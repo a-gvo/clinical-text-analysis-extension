@@ -56,10 +56,10 @@ public class SciGraphAnnotationService implements TermAnnotationService
     private VocabularyManager vocabularies;
 
     /**
-     * The scigraph processor used to annotate text.
+     * The scigraph wrapper that will actually interact with the library.
      */
     @Inject
-    private EntityProcessor processor;
+    private SciGraphWrapper wrapper;
 
     /**
      * The categories to which annotations must belong to.
@@ -99,7 +99,7 @@ public class SciGraphAnnotationService implements TermAnnotationService
             builder.includeAbbreviations(false);
             builder.includeAncronyms(false);
             builder.includeNumbers(false);
-            entities = processor.annotateEntities(builder.get());
+            entities = wrapper.annotate(builder.get());
         } catch(IOException e) {
             throw new AnnotationException(e.getMessage());
         }

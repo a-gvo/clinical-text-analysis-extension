@@ -122,9 +122,9 @@ public class SciGraphAnnotationServiceTest
         EntityAnnotation blueEyesAnnotation = new EntityAnnotation(entity, start, end);
         result.add(blueEyesAnnotation);
 
-        /* Mock SciGraph entity processor */
-        EntityProcessor processor = this.mocker.getInstance(EntityProcessor.class);
-        when(processor.annotateEntities(argThat(new EntityFormatConfigurationMatcher(text)))).thenReturn(result);
+        /* Mock SciGraph wrapper */
+        SciGraphWrapper wrapper = this.mocker.getInstance(SciGraphWrapper.class);
+        when(wrapper.annotate(argThat(new EntityFormatConfigurationMatcher(text)))).thenReturn(result);
 
         // Mock Ontology Manager
         VocabularyManager vocabularyManager = this.mocker.getInstance(VocabularyManager.class);
@@ -154,8 +154,8 @@ public class SciGraphAnnotationServiceTest
         String text = "";
         List<EntityAnnotation> result = new LinkedList<EntityAnnotation>();
 
-        EntityProcessor processor = this.mocker.getInstance(EntityProcessor.class);
-        when(processor.annotateEntities(argThat(new EntityFormatConfigurationMatcher(text)))).thenReturn(result);
+        SciGraphWrapper wrapper = this.mocker.getInstance(SciGraphWrapper.class);
+        when(wrapper.annotate(argThat(new EntityFormatConfigurationMatcher(text)))).thenReturn(result);
 
         List<TermAnnotation> expected = new LinkedList<TermAnnotation>();
         assertEquals(expected, client.annotate(text));
