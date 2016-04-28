@@ -1,0 +1,12 @@
+graphConfiguration:
+  location: hpodb
+  curies:
+    hpo: 'http://purl.obolibrary.org/obo/'
+    oboInOwl: 'http://www.geneontology.org/formats/oboInOwl#'
+  indexedNodeProperties:
+    - category
+    - label
+    - fragment
+  exactNodeProperties:
+    - label
+    - synonym

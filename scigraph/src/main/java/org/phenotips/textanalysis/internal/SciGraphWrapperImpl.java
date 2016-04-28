@@ -21,27 +21,44 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.component.phase.InitializationException;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.Arrays;
 
-import edu.sdsc.scigraph.annotation.EntityProcessor;
-import edu.sdsc.scigraph.annotation.EntityAnnotation;
-import edu.sdsc.scigraph.annotation.Entity;
-import edu.sdsc.scigraph.annotation.EntityFormatConfiguration;
-import edu.sdsc.scigraph.annotation.EntityModule;
-import edu.sdsc.scigraph.neo4j.Neo4jModule;
-import edu.sdsc.scigraph.neo4j.Neo4jConfiguration;
+/* This is the same parser used by Scigraph itself, which is why we're
+ * using it here.
+ */
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
+import edu.sdsc.scigraph.annotation.EntityAnnotation;
+import edu.sdsc.scigraph.annotation.EntityFormatConfiguration;
+import edu.sdsc.scigraph.annotation.EntityModule;
+import edu.sdsc.scigraph.annotation.EntityProcessor;
+import edu.sdsc.scigraph.neo4j.Neo4jConfiguration;
+import edu.sdsc.scigraph.neo4j.Neo4jModule;
+
 /**
  * Wrapper component for the SciGraph annotation service.
+ *
+ * @version $Id$
  */
 @Component
-public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable {
+public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
+{
+
+    /**
+     * The root directory for all scigraph files.
+     */
+    public static final String ROOT_DIRECTORY = "resources/Scigraph/";
+
+    /**
+     * The configuration file for scigraph.
+     */
+    public static final String CONFIG_FILE = "annotations.yaml";
 
     /**
      * The entity processor to use for annotations.
@@ -52,9 +69,13 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable {
     public void initialize() throws InitializationException {
         /* Scigraph uses Google Guice for dependency injection, so we'll have to
          * set up a guice injector to start up. */
-        Neo4jConfiguration config = getConfig();
-        Injector injector = Guice.createInjector(new Neo4jModule(config), new EntityModule());
-        processor = injector.getInstance(EntityProcessor.class);
+        try {
+            Neo4jConfiguration config = getConfig();
+            Injector injector = Guice.createInjector(new Neo4jModule(config), new EntityModule());
+            processor = injector.getInstance(EntityProcessor.class);
+        } catch (IOException e) {
+            throw new InitializationException(e.getMessage());
+        }
     }
 
     @Override
@@ -66,15 +87,12 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable {
      * Get the configuration for the Neo4j database that scigraph uses.
      * @return Neo4jConfiguration the configuration
      */
-    private Neo4jConfiguration getConfig() {
-        /* TODO Get rid of hardcoded settings. */
-        Neo4jConfiguration config = new Neo4jConfiguration();
-        Map<String, String> curies = config.getCuries();
-        curies.put("hpo", "http://purl.obolibrary.org/obo/");
-        curies.put("oboInOwl", "http://www.geneontology.org/formats/oboInOwl#");
-        config.getIndexedNodeProperties().addAll(Arrays.asList("category", "label", "fragment"));
-        config.getExactNodeProperties().addAll(Arrays.asList("label", "synonym"));
-        config.setLocation("resources/hpo_neo4j/");
+    private Neo4jConfiguration getConfig() throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        String configFile = new File(ROOT_DIRECTORY, CONFIG_FILE).toString();
+        Neo4jConfiguration config = mapper.readValue(configFile, Neo4jConfiguration.class);
+        /* Gotta qualify the location with the scigraph root. */
+        config.setLocation(new File(ROOT_DIRECTORY, config.getLocation()).toString());
         return config;
     }
 }

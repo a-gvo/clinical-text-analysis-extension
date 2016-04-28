@@ -27,14 +27,18 @@ import edu.sdsc.scigraph.annotation.EntityFormatConfiguration;
 
 /**
  * Wraps scigraph initialization and calls, offering a single interface to annotate text.
+ *
+ * @version $Id$
  */
 @Role
-public interface SciGraphWrapper {
+public interface SciGraphWrapper
+{
 
     /**
      * Annotates text as per the EntityFormatConfiguration given.
      * @param config the entity format configuration to follow
      * @return List of annotations
+     * @throws IOException if SciGraph throws
      */
-    public List<EntityAnnotation> annotate(EntityFormatConfiguration config) throws IOException;
+    List<EntityAnnotation> annotate(EntityFormatConfiguration config) throws IOException;
 }

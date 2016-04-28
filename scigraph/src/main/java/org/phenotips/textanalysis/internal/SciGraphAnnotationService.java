@@ -24,31 +24,38 @@ import org.phenotips.vocabulary.VocabularyTerm;
 
 import org.xwiki.component.annotation.Component;
 
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.HashSet;
-import java.util.Arrays;
-import java.io.StringReader;
-import java.io.IOException;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import edu.sdsc.scigraph.annotation.EntityProcessor;
-import edu.sdsc.scigraph.annotation.EntityAnnotation;
 import edu.sdsc.scigraph.annotation.Entity;
+import edu.sdsc.scigraph.annotation.EntityAnnotation;
 import edu.sdsc.scigraph.annotation.EntityFormatConfiguration;
 
 /**
  * Implementation of {@link TermAnnotationService} using SciGraph.
+ *
+ * @version $Id$
  */
 @Component
 @Named("scigraph")
 @Singleton
 public class SciGraphAnnotationService implements TermAnnotationService
 {
+    /**
+     * The categories to which annotations must belong to.
+     * In this case it's just "phenotype"
+     */
+    private static final Set<String> CATEGORIES = new HashSet<String>(Arrays.asList("phenotype"));
+
     /**
      * The ontology used to look up phenotypes.
      */
@@ -61,22 +68,16 @@ public class SciGraphAnnotationService implements TermAnnotationService
     @Inject
     private SciGraphWrapper wrapper;
 
-    /**
-     * The categories to which annotations must belong to.
-     * In this case it's just "phenotype"
-     */
-    private static final Set<String> CATEGORIES = new HashSet<String>(Arrays.asList("phenotype"));
-
     @Override
     public List<TermAnnotation> annotate(String text) throws AnnotationException
     {
         List<EntityAnnotation> entities = sciGraphAnnotate(text);
         List<TermAnnotation> annotations = new LinkedList<>();
-        for(EntityAnnotation ea : entities) {
+        for (EntityAnnotation ea : entities) {
             Entity entity = ea.getToken();
             String termId = entity.getId().replace("hpo:", "");
             VocabularyTerm term = this.vocabularies.resolveTerm(termId);
-            if(term != null) {
+            if (term != null) {
                 long start = ea.getStart();
                 long end = ea.getEnd();
                 annotations.add(new TermAnnotation(start, end, term));
@@ -100,7 +101,7 @@ public class SciGraphAnnotationService implements TermAnnotationService
             builder.includeAncronyms(false);
             builder.includeNumbers(false);
             entities = wrapper.annotate(builder.get());
-        } catch(IOException e) {
+        } catch (IOException e) {
             throw new AnnotationException(e.getMessage());
         }
         return entities;
