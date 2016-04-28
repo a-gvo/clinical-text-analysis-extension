@@ -20,10 +20,13 @@ package org.phenotips.textanalysis.internal;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.component.phase.InitializationException;
+import org.xwiki.environment.Environment;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+
+import javax.inject.Inject;
 
 /* This is the same parser used by Scigraph itself, which is why we're
  * using it here.
@@ -65,6 +68,12 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
      */
     private EntityProcessor processor;
 
+    /**
+     * The environment in use.
+     */
+    @Inject
+    private Environment environment;
+
     @Override
     public void initialize() throws InitializationException {
         /* Scigraph uses Google Guice for dependency injection, so we'll have to
@@ -88,11 +97,12 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
      * @return Neo4jConfiguration the configuration
      */
     private Neo4jConfiguration getConfig() throws IOException {
+        File sciGraphRoot = new File(environment.getPermanentDirectory(), ROOT_DIRECTORY);
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        String configFile = new File(ROOT_DIRECTORY, CONFIG_FILE).getAbsolutePath();
+        String configFile = new File(sciGraphRoot, CONFIG_FILE).getAbsolutePath();
         Neo4jConfiguration config = mapper.readValue(configFile, Neo4jConfiguration.class);
         /* Gotta qualify the location with the scigraph root. */
-        config.setLocation(new File(ROOT_DIRECTORY, config.getLocation()).getAbsolutePath());
+        config.setLocation(new File(sciGraphRoot, config.getLocation()).getAbsolutePath());
         return config;
     }
 }
