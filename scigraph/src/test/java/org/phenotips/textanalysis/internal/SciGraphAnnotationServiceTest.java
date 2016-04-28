@@ -112,8 +112,9 @@ public class SciGraphAnnotationServiceTest
     {
         client = this.mocker.getComponentUnderTest();
         String term = "blue eyes";
-        String text = "The lady has " + term;
+        String text = "The lady has ";
         int start = text.length();
+        text += term;
         int end = start + term.length();
         String termId = "test id";
 
@@ -137,6 +138,57 @@ public class SciGraphAnnotationServiceTest
 
         List<TermAnnotation> actual = client.annotate(text);
 
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test for cases where two terms overlap in the text.
+     *
+     * @throws ComponentLookupException if the mocked component doesn't exist
+     * @throws AnnotationException if the annotation process failed
+     * @throws IOException if annotateEntities throws (hopefully never)
+     */
+    @Test
+    public void testOverlappingAnnotations() throws AnnotationException, ComponentLookupException, IOException
+    {
+        client = this.mocker.getComponentUnderTest();
+        String term1 = "blue eyes";
+        String term2 = "eyes";
+        String text = "The layd has ";
+        int start1 = text.length();
+        int start2 = text.length() + "blue ".length();
+        int end1 = start1 + term1.length();
+        int end2 = start2 + term2.length();
+        String termId1 = "id1";
+        String termId2 = "id2";
+        text += term1;
+
+        List<EntityAnnotation> result = new LinkedList<EntityAnnotation>();
+        Entity entity1 = new Entity(term1, termId1);
+        EntityAnnotation annotation1 = new EntityAnnotation(entity1, start1, end1);
+        Entity entity2 = new Entity(term2, termId2);
+        EntityAnnotation annotation2 = new EntityAnnotation(entity2, start2, end2);
+        result.add(annotation1);
+        result.add(annotation2);
+
+        /* Mock SciGraph wrapper */
+        SciGraphWrapper wrapper = this.mocker.getInstance(SciGraphWrapper.class);
+        when(wrapper.annotate(argThat(new EntityFormatConfigurationMatcher(text)))).thenReturn(result);
+
+        /* Mock Ontology wrapper */
+        VocabularyManager vocabularyManager = this.mocker.getInstance(VocabularyManager.class);
+        VocabularyTerm t1 = mock(VocabularyTerm.class);
+        when(t1.getId()).thenReturn(termId1);
+        when(vocabularyManager.resolveTerm(termId1)).thenReturn(t1);
+        VocabularyTerm t2 = mock(VocabularyTerm.class);
+        when(t2.getId()).thenReturn(termId2);
+        when(vocabularyManager.resolveTerm(termId2)).thenReturn(t2);
+
+        List<TermAnnotation> expected = new LinkedList<TermAnnotation>();
+        expected.add(new TermAnnotation(start1, end1, t1));
+        expected.add(new TermAnnotation(start2, end2, t2));
+
+        List<TermAnnotation> actual = client.annotate(text);
         assertEquals(expected, actual);
     }
 
