@@ -74,7 +74,7 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
             Injector injector = Guice.createInjector(new Neo4jModule(config), new EntityModule());
             processor = injector.getInstance(EntityProcessor.class);
         } catch (IOException e) {
-            throw new InitializationException(e.getMessage());
+            throw new InitializationException(e.getMessage(), e);
         }
     }
 
@@ -89,10 +89,10 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
      */
     private Neo4jConfiguration getConfig() throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        String configFile = new File(ROOT_DIRECTORY, CONFIG_FILE).toString();
+        String configFile = new File(ROOT_DIRECTORY, CONFIG_FILE).getAbsolutePath();
         Neo4jConfiguration config = mapper.readValue(configFile, Neo4jConfiguration.class);
         /* Gotta qualify the location with the scigraph root. */
-        config.setLocation(new File(ROOT_DIRECTORY, config.getLocation()).toString());
+        config.setLocation(new File(ROOT_DIRECTORY, config.getLocation()).getAbsolutePath());
         return config;
     }
 }
