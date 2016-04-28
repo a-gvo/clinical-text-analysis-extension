@@ -1,0 +1,2 @@
+org.phenotips.textanalysis.internal.SciGraphAnnotationService
+org.phenotips.textanalysis.internal.SciGraphWrapperImpl
