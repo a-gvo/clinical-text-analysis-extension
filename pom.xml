@@ -39,9 +39,10 @@
   <modules>
     <module>api</module>
     <module>biolark</module>
-    <module>scigraph</module>
     <module>ui</module>
     <module>pageobjects</module>
+    <module>ctakes-service</module>
+    <module>generic-rest</module>
   </modules>
 
   <profiles>

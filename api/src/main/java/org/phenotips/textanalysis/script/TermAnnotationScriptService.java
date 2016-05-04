@@ -44,7 +44,7 @@ import javax.inject.Singleton;
 public class TermAnnotationScriptService implements ScriptService
 {
     @Inject
-    @Named("scigraph")
+    @Named("genericREST")
     private TermAnnotationService service;
 
     /**
