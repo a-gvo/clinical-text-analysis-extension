@@ -38,10 +38,10 @@
 
   <dependencies>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>clinical-text-analysis-extension-biolark</artifactId>
-      <version>${project.version}</version>
-      <scope>runtime</scope>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>clinical-text-analysis-extension-scigraph</artifactId>
+        <version>${project.version}</version>
+        <scope>runtime</scope>
     </dependency>
   </dependencies>
 

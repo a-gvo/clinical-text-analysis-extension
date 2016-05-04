@@ -24,15 +24,15 @@ import org.xwiki.environment.Environment;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
-
-/* This is the same parser used by Scigraph itself, which is why we're
- * using it here.
- */
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import javax.inject.Singleton;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -50,18 +50,35 @@ import edu.sdsc.scigraph.neo4j.Neo4jModule;
  * @version $Id$
  */
 @Component
+@Singleton
 public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
 {
+    /**
+     * The name of the directory containing the graph.
+     */
+    public static final String GRAPH_LOCATION = "hpo_graph";
 
     /**
-     * The root directory for all scigraph files.
+     * The CURIES used to access the HPO.
+     * These are primarily for convenience of configuration and mapping, though an hpo: curie has to
+     * be defined at all times.
      */
-    public static final String ROOT_DIRECTORY = "resources/Scigraph/";
+    public static final Map<String, String> CURIES;
+
+    /**
+     * The properties that will be indexed on every HPO element.
+     */
+    public static final Set<String> PROPERTIES;
 
     /**
      * The configuration file for scigraph.
      */
     public static final String CONFIG_FILE = "annotations.yaml";
+
+    /**
+     * The load configuration file for scigraph.
+     */
+    public static final String LOAD_FILE = "load.yaml";
 
     /**
      * The entity processor to use for annotations.
@@ -74,15 +91,32 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
     @Inject
     private Environment environment;
 
+    /**
+     * The Scigraph loader.
+     */
+    @Inject
+    private SciGraphLoader loader;
+
+    static {
+        CURIES = new HashMap<>(3);
+        CURIES.put("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
+        CURIES.put("hpo", "http://purl.obolibrary.org/obo/");
+        CURIES.put("oboInOwl", "http://www.geneontology.org/formats/oboInOwl#");
+        PROPERTIES = new HashSet<>(Arrays.asList("category", "label", "fragment", "synonym"));
+    }
+
     @Override
     public void initialize() throws InitializationException {
-        /* Scigraph uses Google Guice for dependency injection, so we'll have to
-         * set up a guice injector to start up. */
         try {
+            if (!loader.isLoaded()) {
+                loader.load();
+            }
             Neo4jConfiguration config = getConfig();
+            /* Scigraph uses Google Guice for dependency injection, so we'll have to
+             * set up a guice injector to start up. */
             Injector injector = Guice.createInjector(new Neo4jModule(config), new EntityModule());
             processor = injector.getInstance(EntityProcessor.class);
-        } catch (IOException e) {
+        } catch (IOException | SciGraphLoader.LoadException e) {
             throw new InitializationException(e.getMessage(), e);
         }
     }
@@ -97,12 +131,12 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
      * @return Neo4jConfiguration the configuration
      */
     private Neo4jConfiguration getConfig() throws IOException {
-        File sciGraphRoot = new File(environment.getPermanentDirectory(), ROOT_DIRECTORY);
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        String configFile = new File(sciGraphRoot, CONFIG_FILE).getAbsolutePath();
-        Neo4jConfiguration config = mapper.readValue(configFile, Neo4jConfiguration.class);
-        /* Gotta qualify the location with the scigraph root. */
-        config.setLocation(new File(sciGraphRoot, config.getLocation()).getAbsolutePath());
+        String location = new File(environment.getPermanentDirectory(), GRAPH_LOCATION).getAbsolutePath();
+        Neo4jConfiguration config = new Neo4jConfiguration();
+        config.getCuries().putAll(CURIES);
+        config.setLocation(location);
+        config.getIndexedNodeProperties().addAll(PROPERTIES);
+        config.getIndexedNodeProperties().addAll(PROPERTIES);
         return config;
     }
 }

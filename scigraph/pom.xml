@@ -63,6 +63,12 @@
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-oldcore</artifactId>
       <version>${xwiki.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>commons-validator</groupId>
+          <artifactId>commons-validator</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.xwiki.platform</groupId>
@@ -78,6 +84,12 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>clinical-text-analysis-extension-api</artifactId>
       <version>${project.version}</version>
+      <exclusions>
+        <exclusion>
+            <groupId>commons-validator</groupId>
+            <artifactId>commons-validator</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -123,6 +135,24 @@
         <version>1.5-SNAPSHOT</version>
         <type>jar</type>
         <scope>compile</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analyzers</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-spellchecker</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+          </exclusion>
+        </exclusions>
     </dependency>
     <dependency>
         <groupId>edu.sdsc</groupId>
@@ -130,6 +160,11 @@
         <version>1.5-SNAPSHOT</version>
         <type>jar</type>
         <scope>compile</scope>
+    </dependency>
+    <dependency>
+        <groupId>commons-validator</groupId>
+        <artifactId>commons-validator</artifactId>
+        <version>1.4.1</version>
     </dependency>
   </dependencies>
   <properties>
