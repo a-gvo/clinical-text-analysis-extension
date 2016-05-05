@@ -41,6 +41,7 @@
     <module>biolark</module>
     <module>ui</module>
     <module>pageobjects</module>
+    <module>ctakes</module>
   </modules>
 
   <profiles>

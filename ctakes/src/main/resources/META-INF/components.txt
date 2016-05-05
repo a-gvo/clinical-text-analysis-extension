@@ -1,0 +1,2 @@
+org.phenotips.textanalysis.internal.CTakesAnnotationService
+org.phenotips.textanalysis.internal.CTakesWrapperImpl
