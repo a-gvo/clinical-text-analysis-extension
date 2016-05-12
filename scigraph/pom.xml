@@ -28,11 +28,11 @@
   <artifactId>clinical-text-analysis-extension-scigraph</artifactId>
   <name>PhenoTips - Clinical Text Analysis - Scigraph implementation for the Java APIs</name>
   <repositories>
-      <repository>
-          <id>CRBS</id>
-          <name>CRBS Maven Repo</name>
-          <url>http://maven.crbs.ucsd.edu/nexus/content/repositories/NIF-snapshot/</url>
-      </repository>
+    <repository>
+      <id>CRBS</id>
+      <name>CRBS Maven Repo</name>
+      <url>http://maven.crbs.ucsd.edu/nexus/content/repositories/NIF-snapshot/</url>
+    </repository>
   </repositories>
   <dependencies>
     <dependency>
@@ -130,41 +130,41 @@
 
     <!-- Scigraph dependencies -->
     <dependency>
-        <groupId>edu.sdsc</groupId>
-        <artifactId>scigraph-core</artifactId>
-        <version>1.5-SNAPSHOT</version>
-        <type>jar</type>
-        <scope>compile</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-analyzers</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-spellchecker</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-queryparser</artifactId>
-          </exclusion>
-        </exclusions>
+      <groupId>edu.sdsc</groupId>
+      <artifactId>scigraph-core</artifactId>
+      <version>1.5-SNAPSHOT</version>
+      <type>jar</type>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-analyzers</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-spellchecker</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-queryparser</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-        <groupId>edu.sdsc</groupId>
-        <artifactId>scigraph-entity</artifactId>
-        <version>1.5-SNAPSHOT</version>
-        <type>jar</type>
-        <scope>compile</scope>
+      <groupId>edu.sdsc</groupId>
+      <artifactId>scigraph-entity</artifactId>
+      <version>1.5-SNAPSHOT</version>
+      <type>jar</type>
+      <scope>compile</scope>
     </dependency>
     <dependency>
-        <groupId>commons-validator</groupId>
-        <artifactId>commons-validator</artifactId>
-        <version>1.4.1</version>
+      <groupId>commons-validator</groupId>
+      <artifactId>commons-validator</artifactId>
+      <version>1.4.1</version>
     </dependency>
   </dependencies>
   <properties>
