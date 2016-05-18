@@ -30,6 +30,8 @@ import io.scigraph.owlapi.loader.OwlLoadConfiguration;
 import io.scigraph.owlapi.loader.OwlLoadConfigurationLoader;
 import io.scigraph.services.configuration.ApplicationConfiguration;
 
+import org.apache.commons.io.FileUtils;
+
 
 /**
  * A Scigraph application for use with phenotips.
@@ -67,13 +69,13 @@ public class PTSciGraphApplication extends MainApplication
     @Override
     public void initialize(Bootstrap<ApplicationConfiguration> bootstrap)
     {
-        File graph = new File(config.getGraphConfiguration().getLocation(), GRAPH_NAME);
-        if (!graph.exists()) {
-            try {
-                BatchOwlLoader.load(config);
-            } catch (ExecutionException | InterruptedException e) {
-                throw new RuntimeException(e.getMessage(), e);
-            }
+        File graph = new File(config.getGraphConfiguration().getLocation());
+        /* There's no other way to reindex, so unfortunately we will have to delete everything every time */
+        FileUtils.deleteQuietly(graph);
+        try {
+            BatchOwlLoader.load(config);
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e.getMessage(), e);
         }
         super.initialize(bootstrap);
     }
