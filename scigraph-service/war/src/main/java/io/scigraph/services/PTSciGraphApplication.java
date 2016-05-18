@@ -24,14 +24,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.commons.io.FileUtils;
+
 import io.dropwizard.setup.Bootstrap;
 import io.scigraph.owlapi.loader.BatchOwlLoader;
 import io.scigraph.owlapi.loader.OwlLoadConfiguration;
 import io.scigraph.owlapi.loader.OwlLoadConfigurationLoader;
 import io.scigraph.services.configuration.ApplicationConfiguration;
-
-import org.apache.commons.io.FileUtils;
-
 
 /**
  * A Scigraph application for use with phenotips.
