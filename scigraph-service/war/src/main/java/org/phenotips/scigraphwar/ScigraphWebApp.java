@@ -20,9 +20,9 @@ package org.phenotips.scigraphwar;
 import javax.servlet.annotation.WebListener;
 
 import be.fluid_it.tools.dropwizard.box.WebApplication;
-import io.scigraph.services.MainApplication;
-import io.scigraph.services.configuration.ApplicationConfiguration;
+
 import io.scigraph.services.PTSciGraphApplication;
+import io.scigraph.services.configuration.ApplicationConfiguration;
 
 
 /**
@@ -33,16 +33,16 @@ import io.scigraph.services.PTSciGraphApplication;
 @WebListener
 public class ScigraphWebApp extends WebApplication<ApplicationConfiguration>
 {
-    private static String LOAD_CONFIG;
+    private static String loadConfig;
 
     static {
-        LOAD_CONFIG = ScigraphWebApp.class.getClassLoader().getResource("load.yaml").getPath();
+        loadConfig = ScigraphWebApp.class.getClassLoader().getResource("load.yaml").getPath();
     }
     /**
      * CTOR.
      */
     public ScigraphWebApp()
     {
-        super(new PTSciGraphApplication(LOAD_CONFIG), "server.yaml");
+        super(new PTSciGraphApplication(loadConfig), "server.yaml");
     }
 }

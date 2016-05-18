@@ -17,14 +17,13 @@
  */
 package org.phenotips.textanalysis.internal;
 
+import org.phenotips.textanalysis.TermAnnotationService;
+
 import org.xwiki.component.annotation.Role;
 
-import java.io.IOException;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-import org.phenotips.textanalysis.TermAnnotationService;
 
 /**
  * Wraps scigraph initialization and calls, offering a single interface to annotate text.
@@ -37,18 +36,19 @@ public interface SciGraphWrapper
 
     /**
      * Annotates text as per the EntityFormatConfiguration given.
-     * @param string the string to annotate
+     * @param text the string to annotate
      * @return List of annotations
-     * @throws AnnotationException if something goes wrong
+     * @throws TermAnnotationService.AnnotationException if something goes wrong
      */
     List<SciGraphAnnotation> annotate(String text) throws TermAnnotationService.AnnotationException;
-    
 
     /**
      * A scigraph annotation as returned by scigraph.
+     *
+     * @version $Id$
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static final class SciGraphAnnotation
+    final class SciGraphAnnotation
     {
         /**
          * The token corresponding to the annotation; in phenotype terms, this is the term.
@@ -60,9 +60,10 @@ public interface SciGraphWrapper
              * The token's id.
              */
             private String id;
-            
+
             /**
              * Return the id.
+             * @return the id
              */
             public String getId()
             {
@@ -71,6 +72,7 @@ public interface SciGraphWrapper
 
             /**
              * Set the id.
+             * @param id the id
              */
             public void setId(String id)
             {
@@ -95,6 +97,7 @@ public interface SciGraphWrapper
 
         /**
          * Get the token.
+         * @return the token
          */
         public Token getToken()
         {
@@ -103,6 +106,7 @@ public interface SciGraphWrapper
 
         /**
          * Set the token.
+         * @param token the token
          */
         public void setToken(Token token)
         {
@@ -111,6 +115,7 @@ public interface SciGraphWrapper
 
         /**
          * Get the end of the annotation.
+         * @return the end
          */
         public int getEnd()
         {
@@ -119,6 +124,7 @@ public interface SciGraphWrapper
 
         /**
          * Set the end of the annotation.
+         * @param end the end
          */
         public void setEnd(int end)
         {
@@ -127,14 +133,16 @@ public interface SciGraphWrapper
 
         /**
          * Get the start of the annotation.
+         * @return the start
          */
         public int getStart()
         {
             return start;
         }
-        
+
         /**
          * Set the start of the annotation.
+         * @param start the start
          */
         public void setStart(int start)
         {

@@ -20,9 +20,6 @@ package org.phenotips.textanalysis.internal;
 import org.xwiki.component.annotation.Role;
 
 import java.io.InputStream;
-
-import org.apache.http.NameValuePair;
-
 import java.util.Map;
 
 /**
@@ -35,21 +32,35 @@ public interface SciGraphAPI
 {
     /**
      * Execute a post request to the method given, taking content to be the json body of the request.
+     * @param method the method
+     * @param content the content, to be interpreted as containing a json object
+     * @return the response
+     * @throws SciGraphException if there's an error accessing the method
      */
     InputStream postJson(String method, InputStream content) throws SciGraphException;
 
     /**
      * Post the form given to the method given.
+     * @param method the method
+     * @param params the form parameters
+     * @return the response
+     * @throws SciGraphException if there's an error accessing the method
      */
     InputStream postForm(String method, Map<String, String> params) throws SciGraphException;
 
     /**
      * Send an empty post to the method given.
+     * @param method the method
+     * @return the response
+     * @throws SciGraphException if there's an error accessing the method
      */
     InputStream postEmpty(String method) throws SciGraphException;
 
     /**
      * Send an empty get to the method given.
+     * @param method the method
+     * @return the response
+     * @throws SciGraphException if there's an error accessing the method
      */
     InputStream getEmpty(String method) throws SciGraphException;
 
@@ -58,7 +69,7 @@ public interface SciGraphAPI
      *
      * @version $Id$
      */
-    public static class SciGraphException extends Exception
+    class SciGraphException extends Exception
     {
         /**
          * CTOR.

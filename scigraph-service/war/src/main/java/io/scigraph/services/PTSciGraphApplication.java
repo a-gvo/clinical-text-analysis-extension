@@ -20,52 +20,34 @@
  * services in that package anyway. */
 package io.scigraph.services;
 
-import io.scigraph.services.MainApplication;
-import io.dropwizard.assets.AssetsBundle;
-import io.dropwizard.views.ViewBundle;
-import io.scigraph.services.configuration.ApplicationConfiguration;
-import io.dropwizard.setup.Bootstrap;
-import ru.vyarus.dropwizard.guice.GuiceBundle;
-import io.scigraph.owlapi.loader.OwlLoadConfiguration;
-import io.scigraph.owlapi.loader.OwlLoadConfigurationLoader;
-import io.scigraph.owlapi.loader.BatchOwlLoader;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
-import java.net.URL;
+
+import io.dropwizard.setup.Bootstrap;
+import io.scigraph.owlapi.loader.BatchOwlLoader;
+import io.scigraph.owlapi.loader.OwlLoadConfiguration;
+import io.scigraph.owlapi.loader.OwlLoadConfigurationLoader;
+import io.scigraph.services.configuration.ApplicationConfiguration;
+
 
 /**
  * A Scigraph application for use with phenotips.
+ *
+ * @version $Id$
  */
 public class PTSciGraphApplication extends MainApplication
 {
     /**
-     * The load config object.
-     */
-    private OwlLoadConfiguration config;
-
-    /**
      * The name used to verify whether the graph is there.
      * TODO MAKE THIS PORTABLE
      */
-    private static String GRAPH_NAME = "index/lucene/node/node_auto_index";
+    private static final String GRAPH_NAME = "index/lucene/node/node_auto_index";
 
-    @Override
-    public void initialize(Bootstrap<ApplicationConfiguration> bootstrap)
-    {
-        File graph = new File(config.getGraphConfiguration().getLocation(), GRAPH_NAME);
-        if (!graph.exists()) {
-            try {
-                BatchOwlLoader.load(config);
-            } catch (ExecutionException | InterruptedException e) {
-                throw new RuntimeException(e.getMessage(), e);
-            }
-        }
-        super.initialize(bootstrap);
-    }
+    /**
+     * The load config object.
+     */
+    private OwlLoadConfiguration config;
 
     /**
      * Construct a new PTSciGraphApplication.
@@ -80,5 +62,19 @@ public class PTSciGraphApplication extends MainApplication
         } catch (IOException e) {
             throw new RuntimeException(e.getMessage(), e);
         }
+    }
+
+    @Override
+    public void initialize(Bootstrap<ApplicationConfiguration> bootstrap)
+    {
+        File graph = new File(config.getGraphConfiguration().getLocation(), GRAPH_NAME);
+        if (!graph.exists()) {
+            try {
+                BatchOwlLoader.load(config);
+            } catch (ExecutionException | InterruptedException e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        }
+        super.initialize(bootstrap);
     }
 }

@@ -17,28 +17,24 @@
  */
 package org.phenotips.textanalysis.internal;
 
+import org.phenotips.textanalysis.TermAnnotationService;
+
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.component.phase.InitializationException;
-import org.xwiki.environment.Environment;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.phenotips.textanalysis.TermAnnotationService;
 
 /**
  * Wrapper component for the SciGraph annotation service.

@@ -19,31 +19,34 @@ package org.phenotips.textanalysis.internal;
 
 import org.xwiki.component.annotation.Component;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.MalformedURLException;
-
-import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.http.NameValuePair;
+import org.apache.http.client.fluent.Request;
+import org.apache.http.entity.ContentType;
 import org.apache.http.message.BasicNameValuePair;
 
-import org.apache.http.client.fluent.*;
-import org.apache.http.entity.ContentType;
-import org.apache.http.client.ClientProtocolException;
 
-import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Set;
-
+/**
+ * Implements the scigraph api.
+ *
+ * @version $Id$
+ */
 @Component
 public class SciGraphAPIImpl implements SciGraphAPI
 {
 
+    /**
+     * The url where scigraph is being hosted.
+     */
     private static final String BASE_URL = "http://localhost:8080/scigraph/scigraph/";
 
     @Override
@@ -99,6 +102,11 @@ public class SciGraphAPIImpl implements SciGraphAPI
         }
     }
 
+    /**
+     * Get the uri to access a method.
+     * @param method the name of the method
+     * @return the corresponding uri.
+     */
     private URI getAbsoluteURI(String method) throws URISyntaxException, MalformedURLException {
         URL base = new URL(BASE_URL);
         URL absolute = new URL(base, method);

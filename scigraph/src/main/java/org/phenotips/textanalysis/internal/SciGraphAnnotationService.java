@@ -24,11 +24,9 @@ import org.phenotips.vocabulary.VocabularyTerm;
 
 import org.xwiki.component.annotation.Component;
 
-import java.io.IOException;
-import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
