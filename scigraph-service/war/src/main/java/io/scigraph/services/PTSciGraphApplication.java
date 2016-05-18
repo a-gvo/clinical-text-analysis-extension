@@ -65,17 +65,6 @@ public class PTSciGraphApplication extends MainApplication
             }
         }
         super.initialize(bootstrap);
-        /*bootstrap.addBundle(new AssetsBundle("/swagger/", "/docs", "index.html"));
-        bootstrap.addBundle(new ViewBundle<ApplicationConfiguration>() {
-        @Override
-        public Map<String, Map<String, String>> getViewConfiguration(ApplicationConfiguration configuration) {
-            return new HashMap<>();
-        }
-        });
-        bootstrap.addBundle(GuiceBundle.builder()
-            .enableAutoConfig("io.scigraph.services")
-            .injectorFactory(factory)
-            .modules(new PTSciGraphApplicationModule(config)).build());*/
     }
 
     /**

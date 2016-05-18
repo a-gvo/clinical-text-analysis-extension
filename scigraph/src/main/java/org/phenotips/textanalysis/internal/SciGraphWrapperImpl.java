@@ -50,12 +50,6 @@ import org.phenotips.textanalysis.TermAnnotationService;
 public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
 {
     /**
-     * The Scigraph loader.
-     */
-    @Inject
-    private SciGraphLoader loader;
-
-    /**
      * The object for API interaction with scigraph.
      */
     @Inject
@@ -69,13 +63,6 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
     @Override
     public void initialize() throws InitializationException {
         mapper = new ObjectMapper();
-        try {
-            if (!loader.isLoaded()) {
-                loader.load();
-            }
-        } catch (SciGraphLoader.LoadException e) {
-            throw new InitializationException(e.getMessage(), e);
-        }
     }
 
     @Override
