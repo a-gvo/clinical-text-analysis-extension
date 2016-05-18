@@ -24,6 +24,7 @@ import org.xwiki.environment.Environment;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,15 +35,10 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
-import edu.sdsc.scigraph.annotation.EntityAnnotation;
-import edu.sdsc.scigraph.annotation.EntityFormatConfiguration;
-import edu.sdsc.scigraph.annotation.EntityModule;
-import edu.sdsc.scigraph.annotation.EntityProcessor;
-import edu.sdsc.scigraph.neo4j.Neo4jConfiguration;
-import edu.sdsc.scigraph.neo4j.Neo4jModule;
+import org.phenotips.textanalysis.TermAnnotationService;
 
 /**
  * Wrapper component for the SciGraph annotation service.
@@ -54,89 +50,45 @@ import edu.sdsc.scigraph.neo4j.Neo4jModule;
 public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
 {
     /**
-     * The name of the directory containing the graph.
-     */
-    public static final String GRAPH_LOCATION = "hpo_graph";
-
-    /**
-     * The CURIES used to access the HPO.
-     * These are primarily for convenience of configuration and mapping, though an hpo: curie has to
-     * be defined at all times.
-     */
-    public static final Map<String, String> CURIES;
-
-    /**
-     * The properties that will be indexed on every HPO element.
-     */
-    public static final Set<String> PROPERTIES;
-
-    /**
-     * The configuration file for scigraph.
-     */
-    public static final String CONFIG_FILE = "annotations.yaml";
-
-    /**
-     * The load configuration file for scigraph.
-     */
-    public static final String LOAD_FILE = "load.yaml";
-
-    /**
-     * The entity processor to use for annotations.
-     */
-    private EntityProcessor processor;
-
-    /**
-     * The environment in use.
-     */
-    @Inject
-    private Environment environment;
-
-    /**
      * The Scigraph loader.
      */
     @Inject
     private SciGraphLoader loader;
 
-    static {
-        CURIES = new HashMap<>(3);
-        CURIES.put("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
-        CURIES.put("hpo", "http://purl.obolibrary.org/obo/");
-        CURIES.put("oboInOwl", "http://www.geneontology.org/formats/oboInOwl#");
-        PROPERTIES = new HashSet<>(Arrays.asList("category", "label", "fragment", "synonym"));
-    }
+    /**
+     * The object for API interaction with scigraph.
+     */
+    @Inject
+    private SciGraphAPI api;
+
+    /**
+     * The object mapper to use for json parsing.
+     */
+    private ObjectMapper mapper;
 
     @Override
     public void initialize() throws InitializationException {
+        mapper = new ObjectMapper();
         try {
             if (!loader.isLoaded()) {
                 loader.load();
             }
-            Neo4jConfiguration config = getConfig();
-            /* Scigraph uses Google Guice for dependency injection, so we'll have to
-             * set up a guice injector to start up. */
-            Injector injector = Guice.createInjector(new Neo4jModule(config), new EntityModule());
-            processor = injector.getInstance(EntityProcessor.class);
-        } catch (IOException | SciGraphLoader.LoadException e) {
+        } catch (SciGraphLoader.LoadException e) {
             throw new InitializationException(e.getMessage(), e);
         }
     }
 
     @Override
-    public List<EntityAnnotation> annotate(EntityFormatConfiguration config) throws IOException {
-        return processor.annotateEntities(config);
-    }
-
-    /**
-     * Get the configuration for the Neo4j database that scigraph uses.
-     * @return Neo4jConfiguration the configuration
-     */
-    private Neo4jConfiguration getConfig() throws IOException {
-        String location = new File(environment.getPermanentDirectory(), GRAPH_LOCATION).getAbsolutePath();
-        Neo4jConfiguration config = new Neo4jConfiguration();
-        config.getCuries().putAll(CURIES);
-        config.setLocation(location);
-        config.getIndexedNodeProperties().addAll(PROPERTIES);
-        config.getIndexedNodeProperties().addAll(PROPERTIES);
-        return config;
+    public List<SciGraphAnnotation> annotate(String text) throws TermAnnotationService.AnnotationException {
+        try {
+            Map<String, String> params = new HashMap<>(2);
+            params.put("content", text);
+            params.put("includeCat", "phenotype");
+            InputStream is = api.postForm("annotations/entities", params);
+            TypeReference reference = new TypeReference<List<SciGraphAnnotation>>() { };
+            return mapper.readValue(is, reference);
+        } catch (IOException | SciGraphAPI.SciGraphException e) {
+            throw new TermAnnotationService.AnnotationException(e.getMessage(), e);
+        }
     }
 }

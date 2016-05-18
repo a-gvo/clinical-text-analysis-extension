@@ -56,5 +56,16 @@ public interface TermAnnotationService
         {
             super(message);
         }
+
+        /**
+         * Constructs a new AnnotationException with the specified detail message and cause.
+         *
+         * @param message the detail message
+         * @param cause the cause
+         */
+        public AnnotationException(String message, Exception cause)
+        {
+            super(message, cause);
+        }
     }
 }

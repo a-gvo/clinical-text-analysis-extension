@@ -19,50 +19,62 @@ package org.phenotips.textanalysis.internal;
 
 import org.xwiki.component.annotation.Role;
 
+import java.io.InputStream;
+
+import org.apache.http.NameValuePair;
+
+import java.util.Map;
+
 /**
- * Loads the hpo into a scigraph.
+ * Interacts with the scigraph rest api.
  *
  * @version $Id$
  */
 @Role
-public interface SciGraphLoader
+public interface SciGraphAPI
 {
     /**
-     * Load the HPO into a scigraph.
-     * @throws LoadException if the load goes wrong
+     * Execute a post request to the method given, taking content to be the json body of the request.
      */
-    void load() throws LoadException;
+    InputStream postJson(String method, InputStream content) throws SciGraphException;
 
     /**
-     * Return whether the load has happened.
-     * Really just checks if the directory where the database is supposed to be exists.
-     * @return boolean whether the neo4j database is loaded.
+     * Post the form given to the method given.
      */
-    boolean isLoaded() throws LoadException;
+    InputStream postForm(String method, Map<String, String> params) throws SciGraphException;
 
     /**
-     * Exception thrown when an owl load goes wrong.
+     * Send an empty post to the method given.
+     */
+    InputStream postEmpty(String method) throws SciGraphException;
+
+    /**
+     * Send an empty get to the method given.
+     */
+    InputStream getEmpty(String method) throws SciGraphException;
+
+    /**
+     * An exception returned by SciGraph.
      *
      * @version $Id$
      */
-    class LoadException extends Exception
+    public static class SciGraphException extends Exception
     {
-        private static final long serialVersionUID = 738151762;
-
         /**
-         * Constructor.
-         * @param message the message.
+         * CTOR.
+         * @param message the message
          */
-        public LoadException(String message) {
+        public SciGraphException(String message)
+        {
             super(message);
         }
 
         /**
-         * Constructor with cause.
-         * @param message the exception message
+         * CTOR with cause.
+         * @param message the message
          * @param cause the cause.
          */
-        public LoadException(String message, Exception cause)
+        public SciGraphException(String message, Exception cause)
         {
             super(message, cause);
         }

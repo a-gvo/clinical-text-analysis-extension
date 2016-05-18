@@ -1,3 +1,4 @@
 org.phenotips.textanalysis.internal.SciGraphAnnotationService
 org.phenotips.textanalysis.internal.SciGraphWrapperImpl
 org.phenotips.textanalysis.internal.SciGraphLoaderImpl
+org.phenotips.textanalysis.internal.SciGraphAPIImpl

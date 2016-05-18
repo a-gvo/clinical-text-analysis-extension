@@ -130,41 +130,15 @@
 
     <!-- Scigraph dependencies -->
     <dependency>
-      <groupId>edu.sdsc</groupId>
-      <artifactId>scigraph-core</artifactId>
-      <version>1.5-SNAPSHOT</version>
-      <type>jar</type>
-      <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.lucene</groupId>
-          <artifactId>lucene-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.lucene</groupId>
-          <artifactId>lucene-analyzers</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.lucene</groupId>
-          <artifactId>lucene-spellchecker</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.lucene</groupId>
-          <artifactId>lucene-queryparser</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <!-- TODO: What's the best way to get the proper version? -->
+      <version>2.5.4</version>
     </dependency>
     <dependency>
-      <groupId>edu.sdsc</groupId>
-      <artifactId>scigraph-entity</artifactId>
-      <version>1.5-SNAPSHOT</version>
-      <type>jar</type>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>commons-validator</groupId>
-      <artifactId>commons-validator</artifactId>
-      <version>1.4.1</version>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>fluent-hc</artifactId>
+      <version>4.4.1</version>
     </dependency>
   </dependencies>
   <properties>

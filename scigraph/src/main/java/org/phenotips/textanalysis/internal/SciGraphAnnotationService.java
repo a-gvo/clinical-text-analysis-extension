@@ -28,17 +28,13 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-
-import edu.sdsc.scigraph.annotation.Entity;
-import edu.sdsc.scigraph.annotation.EntityAnnotation;
-import edu.sdsc.scigraph.annotation.EntityFormatConfiguration;
 
 /**
  * Implementation of {@link TermAnnotationService} using SciGraph.
@@ -71,39 +67,17 @@ public class SciGraphAnnotationService implements TermAnnotationService
     @Override
     public List<TermAnnotation> annotate(String text) throws AnnotationException
     {
-        List<EntityAnnotation> entities = sciGraphAnnotate(text);
-        List<TermAnnotation> annotations = new LinkedList<>();
-        for (EntityAnnotation ea : entities) {
-            Entity entity = ea.getToken();
-            String termId = entity.getId().replace("hpo:", "");
+        List<SciGraphWrapper.SciGraphAnnotation> annotations = wrapper.annotate(text);
+        List<TermAnnotation> retval = new ArrayList<>(annotations.size());
+        for (SciGraphWrapper.SciGraphAnnotation annotation : annotations) {
+            String termId = annotation.getToken().getId().replace("hpo:", "").replace("_", ":");
             VocabularyTerm term = this.vocabularies.resolveTerm(termId);
             if (term != null) {
-                long start = ea.getStart();
-                long end = ea.getEnd();
-                annotations.add(new TermAnnotation(start, end, term));
+                long start = annotation.getStart();
+                long end = annotation.getEnd();
+                retval.add(new TermAnnotation(start, end, term));
             }
         }
-        return annotations;
-    }
-
-    /**
-     * Get a list of scigraph EntityAnnotations for the given text.
-     */
-    private List<EntityAnnotation> sciGraphAnnotate(String text) throws AnnotationException
-    {
-        List<EntityAnnotation> entities;
-        try {
-            StringReader reader = new StringReader(text);
-            EntityFormatConfiguration.Builder builder = new EntityFormatConfiguration.Builder(reader);
-            builder.includeCategories(CATEGORIES);
-            builder.longestOnly(false);
-            builder.includeAbbreviations(false);
-            builder.includeAncronyms(false);
-            builder.includeNumbers(false);
-            entities = wrapper.annotate(builder.get());
-        } catch (IOException e) {
-            throw new AnnotationException(e.getMessage());
-        }
-        return entities;
+        return retval;
     }
 }
