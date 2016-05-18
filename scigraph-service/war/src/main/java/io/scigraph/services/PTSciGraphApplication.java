@@ -41,12 +41,6 @@ import org.apache.commons.io.FileUtils;
 public class PTSciGraphApplication extends MainApplication
 {
     /**
-     * The name used to verify whether the graph is there.
-     * TODO MAKE THIS PORTABLE
-     */
-    private static final String GRAPH_NAME = "index/lucene/node/node_auto_index";
-
-    /**
      * The load config object.
      */
     private OwlLoadConfiguration config;
