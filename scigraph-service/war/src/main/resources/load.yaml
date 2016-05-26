@@ -29,6 +29,7 @@ ontologies:
 
 categories:
     http://purl.obolibrary.org/obo/HP_0000001 : phenotype
+    http://purl.obolibrary.org/obo/HP_0000118 : abnormality
 
 mappedProperties:
     - name: label
@@ -41,4 +42,5 @@ mappedProperties:
       properties:
       - oboInOwl:hasExactSynonym
       - oboInOwl:hasBroadSynonym
-
+      - oboInOwl:hasRelatedSynonym
+      - oboInOwl:hasNarrowSynonym

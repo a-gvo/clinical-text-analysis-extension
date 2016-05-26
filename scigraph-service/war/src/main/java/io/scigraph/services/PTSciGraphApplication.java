@@ -22,6 +22,8 @@ package io.scigraph.services;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.io.FileUtils;
@@ -31,6 +33,13 @@ import io.scigraph.owlapi.loader.BatchOwlLoader;
 import io.scigraph.owlapi.loader.OwlLoadConfiguration;
 import io.scigraph.owlapi.loader.OwlLoadConfigurationLoader;
 import io.scigraph.services.configuration.ApplicationConfiguration;
+
+import io.dropwizard.assets.AssetsBundle;
+import io.dropwizard.views.ViewBundle;
+import ru.vyarus.dropwizard.guice.GuiceBundle;
+
+import com.google.inject.Module;
+import com.google.inject.util.Modules;
 
 /**
  * A Scigraph application for use with phenotips.
@@ -70,6 +79,21 @@ public class PTSciGraphApplication extends MainApplication
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e.getMessage(), e);
         }
-        super.initialize(bootstrap);
+        /* Sadly, sadly, there's no way to remove a bundle from bootstrap, so we can't just
+         * super.initialize here, as we'd like. Instead we copy paste (!) the code, just to
+         * replace the SciGraphApplicationModule down there.
+         */
+        bootstrap.addBundle(new AssetsBundle("/swagger/", "/docs", "index.html"));
+        bootstrap.addBundle(new ViewBundle<ApplicationConfiguration>() {
+          @Override
+          public Map<String, Map<String, String>> getViewConfiguration(
+              ApplicationConfiguration configuration) {
+                return new HashMap<>();
+          }
+        });
+        bootstrap.addBundle(GuiceBundle.builder()
+            .enableAutoConfig("io.scigraph.services")
+            .injectorFactory(factory).modules(new PTSciGraphModule(new SciGraphApplicationModule()))
+            .build());
     }
 }

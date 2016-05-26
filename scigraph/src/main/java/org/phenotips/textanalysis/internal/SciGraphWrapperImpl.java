@@ -56,6 +56,11 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
      */
     private ObjectMapper mapper;
 
+    /**
+     * The category to search in.
+     */
+    private static final String CATEGORY = "abnormality";
+
     @Override
     public void initialize() throws InitializationException {
         mapper = new ObjectMapper();
@@ -66,7 +71,7 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
         try {
             Map<String, String> params = new HashMap<>(2);
             params.put("content", text);
-            params.put("includeCat", "phenotype");
+            params.put("includeCat", CATEGORY);
             InputStream is = api.postForm("annotations/entities", params);
             TypeReference reference = new TypeReference<List<SciGraphAnnotation>>() { };
             return mapper.readValue(is, reference);
