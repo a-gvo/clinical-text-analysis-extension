@@ -67,6 +67,11 @@ import java.util.ArrayList;
 
 public class PTVocabularyImpl extends VocabularyNeo4jImpl
 {
+    /**
+     * The similarity score used when searching.
+     */
+    public static final float SIMILARITY = 0.7f;
+
     private static final Logger logger = Logger.getLogger(PTVocabularyImpl.class.getName());
 
     private GraphDatabaseService graph;
@@ -86,8 +91,9 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
         String[] parts = ("^ " + text + " $").split(" ");
         SpanQuery[] clauses = new SpanQuery[parts.length];
         for (int i = 0; i < parts.length; i++) {
+            /* There's a limit of 5 terms, which we set just to speed everything along. */
             clauses[i] = new SpanMultiTermQueryWrapper<FuzzyQuery>(
-                    new FuzzyQuery(new Term(field, parts[i]), fuzzy));
+                    new FuzzyQuery(new Term(field, parts[i]), fuzzy, 0, 5));
         }
         /* Slop of 0 and inOrder of true basically turns this into a lucene phrase query */
         SpanNearQuery q = new SpanNearQuery(clauses, 0, true);
@@ -108,33 +114,40 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
             String text = query.getInput();
             QueryParser parser = getQueryParser();
             String exactQuery = String.format("\"\\^ %s $\"", text);
-            String prefixQuery = String.format("\"\\^ %s \"", text);
 
             finalQuery.add(LuceneUtils.getBoostedQuery(parser, exactQuery, 100.0f), Occur.SHOULD);
-            finalQuery.add(createSpanQuery(text, NodeProperties.LABEL, 0.6f, 36.0f), Occur.SHOULD);
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, prefixQuery, 30.0f), Occur.SHOULD);
+            finalQuery.add(createSpanQuery(text, NodeProperties.LABEL, SIMILARITY, 36.0f), Occur.SHOULD);
             finalQuery.add(LuceneUtils.getBoostedQuery(parser, text, 20.0f), Occur.SHOULD);
 
             finalQuery.add(LuceneUtils.getBoostedQuery(parser, Concept.SYNONYM + ":" + exactQuery, 70.0f),
                     Occur.SHOULD);
-            finalQuery.add(createSpanQuery(text, Concept.SYNONYM, 0.6f, 25.0f), Occur.SHOULD);
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, Concept.SYNONYM + ":" + prefixQuery, 20.0f),
-                    Occur.SHOULD);
+            finalQuery.add(createSpanQuery(text, Concept.SYNONYM, SIMILARITY, 25.0f), Occur.SHOULD);
             finalQuery.add(LuceneUtils.getBoostedQuery(parser, Concept.SYNONYM + ":" + text, 15.0f),
                     Occur.SHOULD);
+
+            finalQuery.add(LuceneUtils.getBoostedQuery(parser, "comment:" + text, 3.0f), Occur.SHOULD);
+            finalQuery.add(createSpanQuery(text, "comment", SIMILARITY, 5.0f), Occur.SHOULD);
         } catch (ParseException e) {
             logger.log(Level.WARNING, "Failed to parse query", e);
         }
         System.out.println("\n" + finalQuery);
         try (Transaction tx = graph.beginTx()) {
             IndexHits<Node> hits = graph.index().getNodeAutoIndexer().getAutoIndex().query(finalQuery);
+            /* We're gonna increase this as we go along, so if a phrase returns very few results, it'll return
+             * what it has, but if there's tons and tons of results we'll only return good stuff.
+             * This really only works because the hits come back sorted by order of relevance.
+             */
+            float threshold = 0.1f;
+            int count = 2;
             List<Concept> result = new ArrayList<Concept>();
             for(Node n : hits) {
                 float score = hits.currentScore();
                 Concept c = transformer.apply(n);
                 System.out.println(score + " " + c.toString());
-                if (score > 0.5) {
+                if (score >= threshold) {
                     result.add(c);
+                    threshold += (0.8 / (count));
+                    count *= 2;
                 }
             }
             tx.success();

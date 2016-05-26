@@ -38,6 +38,8 @@ mappedProperties:
     - name: comment
       properties:
       - rdfs:comment
+      - hpo:IAO_0000115
+      - hpo:HP_0040005
     - name: synonym
       properties:
       - oboInOwl:hasExactSynonym
