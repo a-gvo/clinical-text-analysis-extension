@@ -111,18 +111,28 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
          * concepts, and the limit. */
         BooleanQuery finalQuery = new BooleanQuery();
         try {
-            String text = query.getInput();
+            String text = query.getInput().toLowerCase();
             QueryParser parser = getQueryParser();
             String exactQuery = String.format("\"\\^ %s $\"", text);
+            /* The boost for full-text (i.e. non-phrase, non-exact) matching will depend on the length
+             * of the phrase fed in. This way, we try to limit irrelevant matches (for instance so that
+             * "slow" in "slow growth" doesn't match something like "slow onset"). Similarly, we'll
+             * significantly punish the boost if we should be dealing with a single word, simply because
+             * we could be dealing with descriptive words such as "abnormality" or "syndrome" that we
+             * don't want popping up. */
+            float wordCountScore = text.split(" ").length == 1 ? 0.5f : 1.4f;
+            float textBoost;
 
+            textBoost = Math.min((text.length() - 1) * wordCountScore, 20.0f);
             finalQuery.add(LuceneUtils.getBoostedQuery(parser, exactQuery, 100.0f), Occur.SHOULD);
             finalQuery.add(createSpanQuery(text, NodeProperties.LABEL, SIMILARITY, 36.0f), Occur.SHOULD);
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, text, 20.0f), Occur.SHOULD);
+            finalQuery.add(LuceneUtils.getBoostedQuery(parser, text, textBoost), Occur.SHOULD);
 
+            textBoost = Math.min((text.length() - 2) * (wordCountScore - 0.2f), 15.0f);
             finalQuery.add(LuceneUtils.getBoostedQuery(parser, Concept.SYNONYM + ":" + exactQuery, 70.0f),
                     Occur.SHOULD);
             finalQuery.add(createSpanQuery(text, Concept.SYNONYM, SIMILARITY, 25.0f), Occur.SHOULD);
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, Concept.SYNONYM + ":" + text, 15.0f),
+            finalQuery.add(LuceneUtils.getBoostedQuery(parser, Concept.SYNONYM + ":" + text, textBoost),
                     Occur.SHOULD);
 
             finalQuery.add(LuceneUtils.getBoostedQuery(parser, "comment:" + text, 3.0f), Occur.SHOULD);
@@ -137,7 +147,7 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
              * what it has, but if there's tons and tons of results we'll only return good stuff.
              * This really only works because the hits come back sorted by order of relevance.
              */
-            float threshold = 0.1f;
+            float threshold = 0.15f;
             int count = 2;
             List<Concept> result = new ArrayList<Concept>();
             for(Node n : hits) {

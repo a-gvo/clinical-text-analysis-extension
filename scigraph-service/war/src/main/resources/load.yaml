@@ -3,8 +3,8 @@ graphConfiguration:
     indexedNodeProperties:
       - category
       - label
-      - fragment
       - synonym
+      - comment
     exactNodeProperties:
       - label
       - synonym
