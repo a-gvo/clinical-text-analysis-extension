@@ -58,6 +58,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.IndexHits;
 import io.scigraph.lucene.LuceneUtils;
 import io.scigraph.frames.NodeProperties;
+import com.google.common.base.Splitter;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -71,6 +72,11 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
      * The similarity score used when searching.
      */
     public static final float SIMILARITY = 0.7f;
+
+    /**
+     * The length of the prefix that must match when searching.
+     */
+    public static final int FUZZY_PREFIX = 1;
 
     private static final Logger logger = Logger.getLogger(PTVocabularyImpl.class.getName());
 
@@ -93,7 +99,7 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
         for (int i = 0; i < parts.length; i++) {
             /* There's a limit of 5 terms, which we set just to speed everything along. */
             clauses[i] = new SpanMultiTermQueryWrapper<FuzzyQuery>(
-                    new FuzzyQuery(new Term(field, parts[i]), fuzzy, 0, 5));
+                    new FuzzyQuery(new Term(field, parts[i]), fuzzy, FUZZY_PREFIX, 5));
         }
         /* Slop of 0 and inOrder of true basically turns this into a lucene phrase query */
         SpanNearQuery q = new SpanNearQuery(clauses, 0, true);
