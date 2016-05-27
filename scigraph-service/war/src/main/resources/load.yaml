@@ -19,10 +19,10 @@ graphConfiguration:
       dbms.pagecache.memory : 1G
 
 # The number of threads dedicated to reading ontologies
-producerThreadCount: 2
+producerThreadCount: 4
 
 # The number of threads dedicated to processing ontology axioms
-consumerThreadCount: 2
+consumerThreadCount: 4
 
 ontologies:
     - url: https://compbio.charite.de/jenkins/job/hpo/lastStableBuild/artifact/hp/hp.owl

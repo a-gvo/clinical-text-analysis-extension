@@ -20,6 +20,8 @@ package io.scigraph.services;
 import com.google.inject.AbstractModule;
 import com.google.inject.util.Modules;
 
+import io.scigraph.annotation.EntityProcessor;
+import io.scigraph.annotation.PTEntityProcessor;
 import io.scigraph.vocabulary.Vocabulary;
 import io.scigraph.vocabulary.PTVocabularyImpl;
 
@@ -72,6 +74,7 @@ public class PTSciGraphModule extends AbstractModule implements ConfigurationAwa
         public void configure()
         {
             bind(Vocabulary.class).to(PTVocabularyImpl.class);
+            bind(EntityProcessor.class).to(PTEntityProcessor.class);
         }
     }
 }
