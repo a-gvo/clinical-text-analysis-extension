@@ -22,6 +22,9 @@ package io.scigraph.services;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -68,17 +71,35 @@ public class PTSciGraphApplication extends MainApplication
         }
     }
 
-    @Override
-    public void initialize(Bootstrap<ApplicationConfiguration> bootstrap)
+    /**
+     * Load the HPO into a scigraph.
+     */
+    private void loadOntology()
     {
         File graph = new File(config.getGraphConfiguration().getLocation());
         /* There's no other way to reindex, so unfortunately we will have to delete everything every time */
         FileUtils.deleteQuietly(graph);
         try {
+            /* In theory SciGraph can download the url on its own. In theory.
+             * In practice, it tends to crash about half the time, because it streams the
+             * file and hits EOF while reading... So we have to hack around this by
+             * downloading the thing ourselves.
+             */
+            URL url = new URL(config.getOntologies().get(0).url());
+            Path temp = Files.createTempFile("hpoLoad", "owl");
+            FileUtils.copyURLToFile(url, temp.toFile());
+            config.getOntologies().get(0).setUrl(temp.toString());
             BatchOwlLoader.load(config);
-        } catch (ExecutionException | InterruptedException e) {
+        } catch (ExecutionException | InterruptedException | IOException e) {
+            /* TODO is this the best way to deal with this? */
             throw new RuntimeException(e.getMessage(), e);
         }
+    }
+
+    @Override
+    public void initialize(Bootstrap<ApplicationConfiguration> bootstrap)
+    {
+        loadOntology();
         /* Sadly, sadly, there's no way to remove a bundle from bootstrap, so we can't just
          * super.initialize here, as we'd like. Instead we copy paste (!) the code, just to
          * replace the SciGraphApplicationModule down there.

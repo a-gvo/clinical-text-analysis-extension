@@ -25,7 +25,7 @@ producerThreadCount: 2
 consumerThreadCount: 2
 
 ontologies:
-    - url: http://purl.obolibrary.org/obo/hp.owl
+    - url: https://compbio.charite.de/jenkins/job/hpo/lastStableBuild/artifact/hp/hp.owl
 
 categories:
     http://purl.obolibrary.org/obo/HP_0000001 : phenotype
