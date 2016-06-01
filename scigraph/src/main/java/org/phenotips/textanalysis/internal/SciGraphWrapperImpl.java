@@ -46,6 +46,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
 {
     /**
+     * The category to search in.
+     */
+    private static final String CATEGORY = "abnormality";
+
+    /**
      * The object for API interaction with scigraph.
      */
     @Inject
@@ -55,11 +60,6 @@ public class SciGraphWrapperImpl implements SciGraphWrapper, Initializable
      * The object mapper to use for json parsing.
      */
     private ObjectMapper mapper;
-
-    /**
-     * The category to search in.
-     */
-    private static final String CATEGORY = "abnormality";
 
     @Override
     public void initialize() throws InitializationException {

@@ -22,14 +22,16 @@ import com.google.inject.util.Modules;
 
 import io.scigraph.annotation.EntityProcessor;
 import io.scigraph.annotation.PTEntityProcessor;
-import io.scigraph.vocabulary.Vocabulary;
+import io.scigraph.services.configuration.ApplicationConfiguration;
 import io.scigraph.vocabulary.PTVocabularyImpl;
+import io.scigraph.vocabulary.Vocabulary;
 
 import ru.vyarus.dropwizard.guice.module.support.ConfigurationAwareModule;
-import io.scigraph.services.configuration.ApplicationConfiguration;
 
 /**
  * A guice module for scigraph usage within phenotips.
+ *
+ * @version $Id$
  */
 public class PTSciGraphModule extends AbstractModule implements ConfigurationAwareModule<ApplicationConfiguration>
 {

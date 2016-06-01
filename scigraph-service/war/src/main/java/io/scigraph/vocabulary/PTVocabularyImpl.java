@@ -17,55 +17,45 @@
  */
 package io.scigraph.vocabulary;
 
-import javax.inject.Inject;
-import org.neo4j.graphdb.GraphDatabaseService;
-import javax.annotation.Nullable;
-import io.scigraph.neo4j.bindings.IndicatesNeo4jGraphLocation;
-import io.scigraph.owlapi.curies.CurieUtil;
-import io.scigraph.neo4j.NodeTransformer;
-import io.scigraph.frames.Concept;
-
 import java.io.IOException;
 
-import org.apache.lucene.index.Term;
-import org.apache.lucene.search.spans.SpanQuery;
-import org.apache.lucene.search.spans.SpanNearQuery;
-import org.apache.lucene.search.spans.SpanMultiTermQueryWrapper;
-import org.apache.lucene.search.FuzzyQuery;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.annotation.Nullable;
+
+import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.lucene.analysis.KeywordAnalyzer;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.queryParser.analyzing.AnalyzingQueryParser;
-import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.WildcardQuery;
-import org.apache.lucene.search.spell.LuceneDictionary;
-import org.apache.lucene.search.spell.SpellChecker;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.util.Version;
+import org.apache.lucene.search.FuzzyQuery;
+import org.apache.lucene.search.spans.SpanMultiTermQueryWrapper;
+import org.apache.lucene.search.spans.SpanNearQuery;
+import org.apache.lucene.search.spans.SpanQuery;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.IndexHits;
-import io.scigraph.lucene.LuceneUtils;
+
+import io.scigraph.frames.Concept;
 import io.scigraph.frames.NodeProperties;
-import com.google.common.base.Splitter;
+import io.scigraph.lucene.LuceneUtils;
+import io.scigraph.neo4j.NodeTransformer;
+import io.scigraph.neo4j.bindings.IndicatesNeo4jGraphLocation;
+import io.scigraph.owlapi.curies.CurieUtil;
 
-import java.util.List;
-import java.util.logging.Logger;
-import java.util.logging.Level;
-import java.util.ArrayList;
-
-
+/**
+ * A scigraph vocabulary for use with phenotips.
+ *
+ * @version $Id$
+ */
 public class PTVocabularyImpl extends VocabularyNeo4jImpl
 {
     /**
@@ -78,12 +68,29 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
      */
     public static final int FUZZY_PREFIX = 1;
 
-    private static final Logger logger = Logger.getLogger(PTVocabularyImpl.class.getName());
+    /**
+     * Our logger.
+     */
+    private static final Logger LOGGER = Logger.getLogger(PTVocabularyImpl.class.getName());
 
+    /**
+     * The neo4j graph we'll be querying.
+     */
     private GraphDatabaseService graph;
 
+    /**
+     * A transformer to turn nodes into concepts.
+     */
     private NodeTransformer transformer;
 
+    /**
+     * CTOR. To be used by injectors.
+     * @param graph the injected graph database service
+     * @param neo4jLocation the location of neo4j
+     * @param curieUtil the util to resolve curies
+     * @param transformer the transformer to turn nodes into concepts.
+     * @throws IOException if the parent throws
+     */
     @Inject
     public PTVocabularyImpl(GraphDatabaseService graph, @Nullable @IndicatesNeo4jGraphLocation String neo4jLocation,
         CurieUtil curieUtil, NodeTransformer transformer) throws IOException {
@@ -92,6 +99,13 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
         this.transformer = transformer;
     }
 
+    /**
+     * Create a fuzzy phrase query for the text and field given.
+     * @param text the text to query
+     * @param field the field the text should appear in
+     * @param fuzzy the fuzzy factor
+     * @param boost the boost for the query
+     */
     private SpanNearQuery createSpanQuery(String text, String field, float fuzzy, float boost)
     {
         String[] parts = ("^ " + text + " $").split(" ");
@@ -107,10 +121,69 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
         return q;
     }
 
+    /**
+     * Add a label:text match to the boolean query given, matching exactly, fuzzily, and with
+     * a full-text search, using the boosts given.
+     * If any of the boosts are 0, that subquery will not be added.
+     * @param parser the parser that's being used
+     * @param target the query to add to.
+     * @param field the field to query on
+     * @param text the text to match
+     * @param exactBoost the boost for an exact match
+     * @param fuzzyBoost the boost for a fuzzy match
+     * @param fullTextBoost the boost for a full-text search match
+     * @throws ParseException if badly written...
+     */
+    private void addToQuery(QueryParser parser, BooleanQuery target, String field, String text,
+                            float exactBoost, float fuzzyBoost, float fullTextBoost) throws ParseException
+    {
+        String exactQuery = String.format("\"\\^ %s $\"", text);
+        String prefix = field + ":";
+        if (exactBoost > 0) {
+            target.add(LuceneUtils.getBoostedQuery(parser, prefix + exactQuery, exactBoost), Occur.SHOULD);
+        }
+        if (fuzzyBoost > 0) {
+            target.add(createSpanQuery(text, field, SIMILARITY, fuzzyBoost), Occur.SHOULD);
+        }
+        if (fullTextBoost > 0) {
+            String query = prefix + StringUtils.join(text.split(" "), " " + prefix);
+            target.add(LuceneUtils.getBoostedQuery(parser, query, fullTextBoost), Occur.SHOULD);
+        }
+    }
+
+    /* We don't wanna override limitHits since other methods should still work the way they do, so
+     * just call it filter hits.
+     */
+    /**
+     * Filter the hit list given and return the concepts that should be sent back to the user.
+     * @param hits the hits
+     * @return the list of concepts to return.
+     */
+    private List<Concept> filterHits(IndexHits<Node> hits)
+    {
+        /* We're gonna increase this as we go along, so if a phrase returns very few results, it'll return
+         * what it has, but if there's tons and tons of results we'll only return good stuff.
+         * This really only works because the hits come back sorted by order of relevance.
+         */
+        float threshold = 0.11f;
+        int count = 2;
+        List<Concept> result = new ArrayList<Concept>();
+        for (Node n : hits) {
+            float score = hits.currentScore();
+            Concept c = transformer.apply(n);
+            if (score >= threshold) {
+                result.add(c);
+                threshold += (0.8 / (count));
+                count *= 2;
+            }
+        }
+        return result;
+    }
+
     @Override
     public List<Concept> getConceptsFromTerm(Query query)
     {
-        /* This stuff is a translated-ish version of the field boosting you can find in 
+        /* This stuff is a translated-ish version of the field boosting you can find in
          * org.phenotips.solr.internal.HumanPhenotypeOntology
          * Because we only use scigraph for text annotation, we ignore loads and loads of parameters
          * from the query passed in, such as isIncludeSynonyms/Abbreviations/Acronyms, depcreation of
@@ -119,7 +192,6 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
         try {
             String text = query.getInput().toLowerCase();
             QueryParser parser = getQueryParser();
-            String exactQuery = String.format("\"\\^ %s $\"", text);
             /* The boost for full-text (i.e. non-phrase, non-exact) matching will depend on the length
              * of the phrase fed in. This way, we try to limit irrelevant matches (for instance so that
              * "slow" in "slow growth" doesn't match something like "slow onset"). Similarly, we'll
@@ -130,42 +202,18 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
             float textBoost;
 
             textBoost = Math.min((text.length() - 1) * wordCountScore, 20.0f);
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, exactQuery, 100.0f), Occur.SHOULD);
-            finalQuery.add(createSpanQuery(text, NodeProperties.LABEL, SIMILARITY, 36.0f), Occur.SHOULD);
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, text, textBoost), Occur.SHOULD);
+            addToQuery(parser, finalQuery, NodeProperties.LABEL, text, 100.0f, 36.0f, textBoost);
 
             textBoost = Math.min((text.length() - 2) * (wordCountScore - 0.2f), 15.0f);
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, Concept.SYNONYM + ":" + exactQuery, 70.0f),
-                    Occur.SHOULD);
-            finalQuery.add(createSpanQuery(text, Concept.SYNONYM, SIMILARITY, 25.0f), Occur.SHOULD);
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, Concept.SYNONYM + ":" + text, textBoost),
-                    Occur.SHOULD);
+            addToQuery(parser, finalQuery, Concept.SYNONYM, text, 70.0f, 25.0f, textBoost);
 
-            finalQuery.add(LuceneUtils.getBoostedQuery(parser, "comment:" + text, 3.0f), Occur.SHOULD);
-            finalQuery.add(createSpanQuery(text, "comment", SIMILARITY, 5.0f), Occur.SHOULD);
+            addToQuery(parser, finalQuery, "comment", text, 0.0f, 5.0f, 3.0f);
         } catch (ParseException e) {
-            logger.log(Level.WARNING, "Failed to parse query", e);
+            LOGGER.log(Level.WARNING, "Failed to parse query", e);
         }
-        System.out.println("\n" + finalQuery);
         try (Transaction tx = graph.beginTx()) {
             IndexHits<Node> hits = graph.index().getNodeAutoIndexer().getAutoIndex().query(finalQuery);
-            /* We're gonna increase this as we go along, so if a phrase returns very few results, it'll return
-             * what it has, but if there's tons and tons of results we'll only return good stuff.
-             * This really only works because the hits come back sorted by order of relevance.
-             */
-            float threshold = 0.15f;
-            int count = 2;
-            List<Concept> result = new ArrayList<Concept>();
-            for(Node n : hits) {
-                float score = hits.currentScore();
-                Concept c = transformer.apply(n);
-                System.out.println(score + " " + c.toString());
-                if (score >= threshold) {
-                    result.add(c);
-                    threshold += (0.8 / (count));
-                    count *= 2;
-                }
-            }
+            List<Concept> result = filterHits(hits);
             tx.success();
             return result;
         }

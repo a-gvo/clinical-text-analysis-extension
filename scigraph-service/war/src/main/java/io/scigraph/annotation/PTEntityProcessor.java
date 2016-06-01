@@ -17,36 +17,35 @@
  */
 package io.scigraph.annotation;
 
+import java.io.Reader;
 import java.io.StringReader;
+
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
-
-import io.scigraph.lucene.LuceneUtils;
-import io.scigraph.lucene.PatternReplaceFilter;
-
-import java.io.Reader;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
-
-import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.WhitespaceTokenizer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.tokenattributes.FlagsAttribute;
 
-import java.io.IOException;
+import io.scigraph.lucene.LuceneUtils;
+import io.scigraph.lucene.PatternReplaceFilter;
 
 /**
  * An entity processor for use within Phenotips.
+ *
+ * @version $Id$
  */
 public class PTEntityProcessor extends EntityProcessorImpl
 {
+    /**
+     * CTOR.
+     * @param recognizer the injected recognizer.
+     */
     @Inject
     public PTEntityProcessor(EntityRecognizer recognizer)
     {
@@ -65,6 +64,8 @@ public class PTEntityProcessor extends EntityProcessorImpl
 
     /**
      * A lucene analyzer used to tokenize and filter input text.
+     *
+     * @version $Id$
      */
     public static class PTAnalyzer extends Analyzer
     {

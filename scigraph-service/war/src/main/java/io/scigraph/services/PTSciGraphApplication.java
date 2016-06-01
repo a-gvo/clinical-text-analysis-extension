@@ -23,26 +23,23 @@ package io.scigraph.services;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Path;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.io.FileUtils;
 
+import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.setup.Bootstrap;
+import io.dropwizard.views.ViewBundle;
 import io.scigraph.owlapi.loader.BatchOwlLoader;
 import io.scigraph.owlapi.loader.OwlLoadConfiguration;
 import io.scigraph.owlapi.loader.OwlLoadConfigurationLoader;
 import io.scigraph.services.configuration.ApplicationConfiguration;
 
-import io.dropwizard.assets.AssetsBundle;
-import io.dropwizard.views.ViewBundle;
 import ru.vyarus.dropwizard.guice.GuiceBundle;
-
-import com.google.inject.Module;
-import com.google.inject.util.Modules;
 
 /**
  * A Scigraph application for use with phenotips.
@@ -106,11 +103,11 @@ public class PTSciGraphApplication extends MainApplication
          */
         bootstrap.addBundle(new AssetsBundle("/swagger/", "/docs", "index.html"));
         bootstrap.addBundle(new ViewBundle<ApplicationConfiguration>() {
-          @Override
-          public Map<String, Map<String, String>> getViewConfiguration(
-              ApplicationConfiguration configuration) {
-                return new HashMap<>();
-          }
+            @Override
+            public Map<String, Map<String, String>> getViewConfiguration(
+                ApplicationConfiguration configuration) {
+                    return new HashMap<>();
+            }
         });
         bootstrap.addBundle(GuiceBundle.builder()
             .enableAutoConfig("io.scigraph.services")

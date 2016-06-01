@@ -17,26 +17,19 @@
  */
 package io.scigraph.annotation;
 
-import io.scigraph.lucene.LuceneUtils;
-import io.scigraph.lucene.PatternReplaceFilter;
-
-import java.io.Reader;
-import java.util.regex.Pattern;
+import java.io.IOException;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.lucene.analysis.TokenFilter;
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.Tokenizer;
-import org.apache.lucene.analysis.WhitespaceTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.FlagsAttribute;
 
-import java.io.IOException;
-
-
 /**
  * Flags any words that end with a punctuation mark.
+ *
+ * @version $Id$
  */
 public final class PunctuationFilter extends TokenFilter
 {
@@ -66,14 +59,6 @@ public final class PunctuationFilter extends TokenFilter
     private final Matcher m;
 
     /**
-     * Return whether the lfag given has the punctuation bit set.
-     */
-    public static boolean isPunctuationSet(int flags)
-    {
-        return (PUNCTUATION_FLAG & flags) == PUNCTUATION_FLAG;
-    }
-
-    /**
      * CTOR.
      * @param in the input token stream.
      */
@@ -81,6 +66,16 @@ public final class PunctuationFilter extends TokenFilter
     {
         super(in);
         m = pattern.matcher(termAtt);
+    }
+
+    /**
+     * Return whether the flags given has the punctuation bit set.
+     * @param flags the flags to look at
+     * @return whether the punctuation flag is set
+     */
+    public static boolean isPunctuationSet(int flags)
+    {
+        return (PUNCTUATION_FLAG & flags) == PUNCTUATION_FLAG;
     }
 
     @Override
