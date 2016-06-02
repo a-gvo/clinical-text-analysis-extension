@@ -177,12 +177,19 @@
     panel.insert({top : clinicalNotesSubPanel});
 
     //listen for changes in indication for referral text box
-    var textArea = $("PhenoTips.PatientClass_0_indication_for_referral");
-    text = textArea.value;
+    var referalIndication = $("PhenoTips.PatientClass_0_indication_for_referral");
+    var medicalHistory = $("PhenoTips.PatientClass_0_medical_history");
+    text = referalIndication.value + "\n" + medicalHistory.value;
     fetchDismissedSuggestions(updateAnnotations);
-    textArea.observe('blur', function() {
-      if(textArea.value != text) {
-        text = textArea.value;
+    referalIndication.observe('blur', function() {
+      if(!text.startsWith(referalIndication.value)) {
+        text = referalIndication.value + "\n" + medicalHistory.value;
+        updateAnnotations();
+      }
+    });
+    medicalHistory.observe('blur', function() {
+      if(!text.endsWith(medicalHistory.value)) {
+        text = referalIndication.value + "\n" + medicalHistory.value;
         updateAnnotations();
       }
     });
