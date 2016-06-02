@@ -17,8 +17,10 @@
  */
 package io.scigraph.annotation;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -42,6 +44,12 @@ import io.scigraph.lucene.PatternReplaceFilter;
  */
 public class PTEntityProcessor extends EntityProcessorImpl
 {
+
+    /**
+     * The character encoding to use.
+     */
+    private static final String ENCODING = "UTF-8";
+
     /**
      * CTOR.
      * @param recognizer the injected recognizer.
@@ -56,7 +64,15 @@ public class PTEntityProcessor extends EntityProcessorImpl
     BlockingQueue<List<Token<String>>> startShingleProducer(String content)
     {
         BlockingQueue<List<Token<String>>> queue = new LinkedBlockingQueue<List<Token<String>>>();
-        ShingleProducer producer = new PTShingleProducer(new PTAnalyzer(), new StringReader(content), queue);
+        Reader r;
+        try {
+            r = new InputStreamReader(new ByteArrayInputStream(content.getBytes(ENCODING)), ENCODING);
+        } catch (UnsupportedEncodingException e) {
+            /* The encoding is hardcoded, and it's the pretty standard utf-8, so if it's not
+             * supported that's a problem that should probably be fixed. */
+            throw new RuntimeException(e.getMessage(), e);
+        }
+        ShingleProducer producer = new PTShingleProducer(new PTAnalyzer(), r, queue);
         Thread t = new Thread(producer, "Shingle Producer Thread");
         t.start();
         return queue;

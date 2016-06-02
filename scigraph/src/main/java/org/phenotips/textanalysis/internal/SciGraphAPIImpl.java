@@ -17,14 +17,16 @@
  */
 package org.phenotips.textanalysis.internal;
 
-import org.xwiki.component.annotation.Component;
-
 import java.io.IOException;
 import java.io.InputStream;
+
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+
+import java.nio.charset.Charset;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,8 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
 import org.apache.http.message.BasicNameValuePair;
+
+import org.xwiki.component.annotation.Component;
 
 
 /**
@@ -48,6 +52,11 @@ public class SciGraphAPIImpl implements SciGraphAPI
      * The url where scigraph is being hosted.
      */
     private static final String BASE_URL = "http://localhost:8080/scigraph/scigraph/";
+
+    /**
+     * The charset to use when sending requests.
+     */
+    private static final Charset CHARSET = Charset.forName("UTF-8");
 
     @Override
     public InputStream postJson(String method, InputStream content) throws SciGraphException
@@ -73,7 +82,7 @@ public class SciGraphAPIImpl implements SciGraphAPI
                 list.add(pair);
             }
             return Request.Post(uri).
-                bodyForm(list).
+                bodyForm(list, CHARSET).
                 execute().returnContent().asStream();
         } catch (IOException | URISyntaxException e) {
             throw new SciGraphException(e.getMessage(), e);
