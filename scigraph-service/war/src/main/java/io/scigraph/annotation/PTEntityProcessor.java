@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import javax.inject.Inject;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.LengthFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.WhitespaceTokenizer;
@@ -92,8 +93,10 @@ public class PTEntityProcessor extends EntityProcessorImpl
             result = new PatternReplaceFilter(result,
                 Pattern.compile("^([\\.!\\?,:;\"'\\(\\)]*)(.*?)([\\.!\\?,:;\"'\\(\\)]*)$"), "$2", true);
             result = new PatternReplaceFilter(result, Pattern.compile("'s"), "s", true);
+            /* Makes no sense to have lone symbols hanging around, and they'll trip up the lucene parser. */
+            result = new PatternReplaceFilter(result, Pattern.compile("^\\W$"), "", true);
+            result = new LengthFilter(false, result, 1, Integer.MAX_VALUE);
             return result;
         }
-
     }
 }
