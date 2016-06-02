@@ -16,6 +16,7 @@ graphConfiguration:
     - label
     - fragment
     - synonym
+    - comment
   exactNodeProperties:
     - label
     - synonym
