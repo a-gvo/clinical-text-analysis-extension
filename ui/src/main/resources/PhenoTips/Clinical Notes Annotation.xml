@@ -165,6 +165,22 @@
    */
   var widgetContainer = new Element('div', {"id" : 'annotation-widget-container'});
 
+  /**
+   * Container for the annotations' navigation buttons (prev, next, refresh)
+   */
+  var navigation = new Element('div', {"id" : 'annotation-navigation'});
+  var refreshButton = new Element('a', {"id" : 'annotation-refresh',
+                                        "class" : 'button action'});
+  refreshButton.update('Refresh').observe('click', function() {
+    dismissedTerms = {};
+    annotationServiceResults = {};
+    suggestionBank = [];
+    currentSuggestions = {};
+    persistDismissed();
+    updateAnnotations();
+  });
+  navigation.insert(refreshButton);
+
   //generate initial UI elements
   var panel = $$(".current-phenotype-selection")[0];
   if(panel) {
@@ -173,7 +189,7 @@
         new Element('h3', {"class" : "wikigeneratedheader"}).update(
           "&lt;span&gt;&lt;strong&gt;Suggestions from Clinical Notes&lt;/strong&gt;&lt;/span&gt;"
         ) 
-      ).insert(widgetContainer);
+      ).insert(navigation).insert(widgetContainer);
     panel.insert({top : clinicalNotesSubPanel});
 
     //listen for changes in indication for referral text box
@@ -354,19 +370,14 @@
   };
 
   /**
-   * Add term with termId to list of dismissed suggestions and update the dismissed
-   * suggestions on the server.
-   *
-   * @param {string} termId Ontology ID of the phenotype term.
-   * @param {Element} suggestionElt UI Element of one suggestion.
+   * Send the list of dismissed suggestions to the server so they're remembered.
    */
-  function dismissSuggestion(termId, suggestionElt) {
-    dismissedTerms[termId] = true;
+  function persistDismissed() {
+    var delimitedDismissedTerms = Object.keys(dismissedTerms).join('|');
     var parameters = {
       'ajax': true,
       'form_token': $$("meta[name='form_token']")[0].content
     };
-    var delimitedDismissedTerms = Object.keys(dismissedTerms).join('|');
     if (existsDismissedSuggestionDataStore) {
       parameters['PhenoTips.DismissedSuggestionsClass_0_terms'] = delimitedDismissedTerms;
     } else {
@@ -379,6 +390,18 @@
         existsDismissedSuggestionDataStore = true;
       }
     });
+  }
+
+  /**
+   * Add term with termId to list of dismissed suggestions and update the dismissed
+   * suggestions on the server.
+   *
+   * @param {string} termId Ontology ID of the phenotype term.
+   * @param {Element} suggestionElt UI Element of one suggestion.
+   */
+  function dismissSuggestion(termId, suggestionElt) {
+    dismissedTerms[termId] = true;
+    persistDismissed();
     var nextSuggestion = popNextSuggestion();
     delete currentSuggestions[termId];
 
