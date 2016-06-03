@@ -1,3 +1,0 @@
-org.phenotips.textanalysis.internal.BioLarkAnnotationService
-org.phenotips.textanalysis.internal.BiolarkWrapperImpl
-org.phenotips.textanalysis.internal.TermAnnotationServiceInitializer
