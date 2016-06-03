@@ -63,6 +63,12 @@
       <artifactId>scigraph-services</artifactId>
       <version>1.5-SNAPSHOT</version>
       <type>jar</type>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.ws.rs</groupId>
+          <artifactId>jsr311-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
