@@ -17,6 +17,8 @@
  */
 package org.phenotips.textanalysis.internal;
 
+import org.xwiki.component.annotation.Component;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -35,8 +37,6 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
 import org.apache.http.message.BasicNameValuePair;
-
-import org.xwiki.component.annotation.Component;
 
 
 /**
