@@ -152,8 +152,7 @@ var currentSuggestions = {};
 var existsDismissedSuggestionDataStore = false;
 
 /**
- * The index of the first suggestion being displayed at the moment. Should
- * always be 0 mod numSuggestionsToDisplay unless partial pagination is added
+ * The index of the first suggestion being displayed at the moment.
  */
 var currentFirstSuggestion = 0;
 
@@ -175,9 +174,23 @@ var widgetContainer = new Element('div', {"id" : 'annotation-widget-container'})
 /**
  * Container for the annotations' navigation buttons (prev, next, refresh)
  */
-var navigation = new Element('div', {"id" : 'annotation-navigation'});
-var refreshButton = new Element('a', {"id" : 'annotation-refresh',
-                                      "class" : 'button action'});
+var navigation = new Element('div', {"id" : 'annotation-navigation', "class" : 'list-actions'});
+
+/**
+ * A refresh button.
+ */
+var refreshButton = new Element('a', {"id" : 'annotation-refresh', "class" : 'button action', 'href': 'javascript:;'});
+
+/**
+ * A next button; shows the next page.
+ */
+var nextButton = new Element('a', {"id" : 'annotation-next', "class": 'button action', 'href': 'javascript:;'});
+
+/**
+ * A previous button; shows the previous page.
+ */
+var prevButton = new Element('a', {"id" : 'annotation-prev', "class": 'button action', 'href': 'javascript:;'});
+
 refreshButton.update('Refresh').observe('click', function() {
   dismissedTerms = {};
   annotationServiceResults = {};
@@ -186,7 +199,26 @@ refreshButton.update('Refresh').observe('click', function() {
   persistDismissed();
   updateAnnotations();
 });
-navigation.insert(refreshButton);
+
+nextButton.update('Next').observe('click', function() {
+  var nextPage = currentFirstSuggestion + numSuggestionsToDisplay;
+  currentFirstSuggestion = Math.min(nextPage, suggestionBank.length - numSuggestionsToDisplay);
+  updateCurrentSuggestions();
+});
+
+prevButton.update('Previous').observe('click', function() {
+  var prevPage = currentFirstSuggestion - numSuggestionsToDisplay;
+  currentFirstSuggestion = Math.max(prevPage, 0);
+  updateCurrentSuggestions();
+});
+
+var p = new Element('p');
+navigation.insert(p);
+navigation = p;
+
+navigation.insert(new Element('span', {"class" : 'buttonwrapper'}).insert(refreshButton)).
+           insert(new Element('span', {"class" : 'buttonwrapper'}).insert(prevButton)).
+           insert(new Element('span', {"class" : 'buttonwrapper'}).insert(nextButton));
 
 //generate initial UI elements
 var panel = $$(".current-phenotype-selection")[0];
@@ -219,10 +251,27 @@ if(panel) {
 }
 
 /**
+ * Update the currentSuggestions dictionary, populating it with suggestions from the suggestion
+ * bank, then redrawing the UI
+ */
+function updateCurrentSuggestions() {
+  currentSuggestions = {};
+  var end = currentFirstSuggestion + numSuggestionsToDisplay;
+  suggestionBank.slice(currentFirstSuggestion, end).forEach(function(suggestion, idx) {
+    currentSuggestions[suggestion.id] = idx + currentFirstSuggestion;
+  });
+  drawSuggestionsUI();
+}
+
+/**
  * Queries server for annotations to the text, updates list of suggestions and
  * displays suggestions in the UI.
  */
 function updateAnnotations() {
+  /* This (resetting the currentFirstSuggestion) is gonna be a bit annoying if a user has advanced
+   * some pages and then revises the text box, but unfortunately it's really the only way to be
+   * sure we're not gonna paginate past the end. */
+  currentFirstSuggestion = 0;
   if(text) {
     currentSuggestions = {};
     var queryString = '?outputSyntax=plain';
@@ -245,12 +294,7 @@ function updateAnnotations() {
         getExistingPhenotypes();
         populateSuggestionData();
       },
-      onComplete : function () {
-        suggestionBank.slice(0, numSuggestionsToDisplay).forEach(function(suggestion, idx) {
-          currentSuggestions[suggestion.id] = idx;
-        });
-        drawSuggestionsUI();
-      }
+      onComplete : updateCurrentSuggestions
     });
   } else {
     annotationServiceResults = {};
@@ -529,8 +573,11 @@ function drawSuggestionsUI() {
 function updateSuggestionCount() {
   var numCurrentSuggestions = Object.keys(currentSuggestions).length;
   var numTotalSuggestions = suggestionBank.length;
+  var end = currentFirstSuggestion + numCurrentSuggestions;
+  /* Arrays are 0 indexed, but users are not. */
+  var start = currentFirstSuggestion + 1;
   if(numTotalSuggestions &gt; 0) {
-    $("suggestion-count").update(numCurrentSuggestions + " of " + numTotalSuggestions + " suggestions");
+    $("suggestion-count").update(start + " to " + end + " of " + numTotalSuggestions + " suggestions");
   } else {
     $("suggestion-count").update("No suggestions to display");
   }
