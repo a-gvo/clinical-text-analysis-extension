@@ -203,6 +203,7 @@ refreshButton.update('Refresh').observe('click', function() {
 nextButton.update('Next').observe('click', function() {
   var nextPage = currentFirstSuggestion + numSuggestionsToDisplay;
   currentFirstSuggestion = Math.min(nextPage, suggestionBank.length - numSuggestionsToDisplay);
+  currentFirstSuggestion = Math.max(currentFirstSuggestion, 0);
   updateCurrentSuggestions();
 });
 
