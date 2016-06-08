@@ -545,6 +545,8 @@ function popNextSuggestion() {
  */
 function drawSuggestionsUI() {
   var suggestionsContainer = new Element('div', {'id' : 'suggestions-container'});
+  prevButton.hide();
+  nextButton.hide();
   widgetContainer.update(suggestionsContainer);
   //scrap what exists, create UI from 4 first elements in suggestions
   var suggestionBoxes = [];
@@ -561,6 +563,14 @@ function drawSuggestionsUI() {
   });
   suggestionsContainer.update(suggestionList);
   Event.fire(document, 'xwiki:dom:updated', {'elements' : [suggestionsContainer]});
+
+  if (currentFirstSuggestion &gt; 0) {
+    prevButton.show();
+  }
+
+  if ((currentFirstSuggestion + numSuggestionsToDisplay) &lt; suggestionBank.length) {
+    nextButton.show();
+  }
 
   //show progress counter
   widgetContainer.insert(new Element("div", {"id" : "suggestion-count"}));
