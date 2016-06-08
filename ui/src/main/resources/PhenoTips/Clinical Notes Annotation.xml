@@ -413,9 +413,10 @@ function dismissSuggestion(termId, suggestionElt) {
   //var nextSuggestion = popNextSuggestion();
   var deletedIdx = currentSuggestions[termId];
   delete currentSuggestions[termId];
+  suggestionBank.splice(deletedIdx, 1);
   Object.keys(currentSuggestions).forEach(function(key) {
     if (currentSuggestions[key] > deletedIdx) {
-      currentSuggestions[key] += 1;
+      currentSuggestions[key] -= 1;
     }
   });
   var nextIdx = currentFirstSuggestion + numSuggestionsToDisplay - 1;
