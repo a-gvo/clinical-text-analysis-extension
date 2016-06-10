@@ -31,7 +31,6 @@
 
   <modules>
     <module>war</module>
-    <module>SciGraph</module>
   </modules>
 </project>
 
