@@ -17,36 +17,23 @@
  */
 package org.phenotips.textanalysis.internal;
 
-import org.phenotips.vocabulary.VocabularyTerm;
-import org.xwiki.component.annotation.Role;
+import java.util.HashSet;
+import java.util.Set;
 
-import java.util.List;
+import javax.ws.rs.core.Application;
 
-import org.apache.ctakes.typesystem.type.textsem.EntityMention;
-
-
-@Role
-public interface CTakesWrapper
+/**
+ * The basic application for our ctakes service.
+ *
+ * @version $Id$
+ */
+public class CTakesApplication extends Application
 {
-    /**
-     * Return a list of uima annotations.
-     * @param text the text to annotate
-     */
-    public List<EntityMention> annotate(String text) throws CTakesException;
-
-    /**
-     * Wrapper class for any Exception thrown by CTakes.
-     */
-    public static class CTakesException extends Exception
+    @Override
+    public Set<Class<?>> getClasses()
     {
-        /**
-         * CTOR.
-         * @param message the message
-         * @param cause the exception that caused this one.
-         */
-        public CTakesException(String message, Exception cause)
-        {
-            super(message, cause);
-        }
+        Set<Class<?>> retval = new HashSet<>();
+        retval.add(CTakesAnnotationService.class);
+        return retval;
     }
 }

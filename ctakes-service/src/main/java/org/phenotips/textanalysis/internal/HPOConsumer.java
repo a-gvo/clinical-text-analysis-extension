@@ -21,30 +21,31 @@ import java.util.Iterator;
 import java.util.Properties;
 
 import org.apache.ctakes.dictionary.lookup.MetaDataHit;
-import org.apache.ctakes.dictionary.lookup.vo.LookupHit;
 import org.apache.ctakes.dictionary.lookup.ae.BaseLookupConsumerImpl;
+import org.apache.ctakes.dictionary.lookup.vo.LookupHit;
 import org.apache.ctakes.typesystem.type.constants.CONST;
-import org.apache.ctakes.typesystem.type.refsem.OntologyConcept;
-import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
-import org.apache.ctakes.typesystem.type.textsem.EntityMention;
 import org.apache.ctakes.typesystem.type.refsem.Entity;
+import org.apache.ctakes.typesystem.type.refsem.OntologyConcept;
+import org.apache.ctakes.typesystem.type.textsem.EntityMention;
 import org.apache.uima.UimaContext;
 import org.apache.uima.jcas.JCas;
-import org.apache.uima.jcas.cas.FSArray;
 
 /**
  * A consumer that takes dictionary hits and adds them to a jcas as ontology concepts mapped to the hpo.
+ *
+ * @version $Id$
  */
-public class HPOConsumer extends BaseLookupConsumerImpl {
+public class HPOConsumer extends BaseLookupConsumerImpl
+{
     /**
      * The name of the field containing the id name in the properties for this instance.
      */
-    static private final String ID_PRP_KEY = "idname";
+    private static final String ID_PRP_KEY = "idname";
 
     /**
      * The name of the field containing the coding scheme in the properties for this instance.
      */
-    static private final String CODING_SCHEME_PRP_KEY = "codingScheme";
+    private static final String CODING_SCHEME_PRP_KEY = "codingScheme";
 
     /**
      * The properties for this instance.
