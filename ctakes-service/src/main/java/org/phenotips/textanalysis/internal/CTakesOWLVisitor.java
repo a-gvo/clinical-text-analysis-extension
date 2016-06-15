@@ -29,6 +29,9 @@ import org.apache.lucene.index.IndexableField;
 
 import org.semanticweb.owlapi.util.OWLOntologyWalker;
 import org.semanticweb.owlapi.util.OWLOntologyWalkerVisitor;
+import org.semanticweb.owlapi.model.IRI;
+import org.semanticweb.owlapi.model.OWLAnnotationAssertionAxiom;
+import org.semanticweb.owlapi.model.OWLLiteral;
 
 /**
  * Visits OWL objects in the HPO, and arranges them as an Iterable that lucene can index.
@@ -57,6 +60,18 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     {
         super(walker);
         documents = new HashMap<>(INITIAL_MAP_SIZE);
+    }
+
+    @Override
+    public void visit(OWLAnnotationAssertionAxiom axiom) {
+        if(axiom.getSubject() instanceof IRI) {
+            String id = ((IRI) axiom.getSubject()).toString();
+            if (axiom.getValue() instanceof OWLLiteral) {
+                String property = axiom.getProperty().toString();
+                String value = ((OWLLiteral) axiom.getValue()).getLiteral();
+                System.out.println("Subject " + id + " " + property + " :" + value);
+            }
+        }
     }
 
     /**

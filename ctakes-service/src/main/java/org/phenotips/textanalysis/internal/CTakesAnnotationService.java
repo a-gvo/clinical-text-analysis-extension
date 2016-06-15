@@ -21,6 +21,9 @@ import java.io.IOException;
 
 import java.net.URL;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,13 +32,13 @@ import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.ctakes.typesystem.type.textsem.EntityMention;
+import org.apache.lucene.index.IndexWriter;
 import org.apache.uima.UIMAFramework;
 import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
@@ -46,6 +49,10 @@ import org.apache.uima.resource.ResourceSpecifier;
 import org.apache.uima.util.InvalidXMLException;
 import org.apache.uima.util.XMLInputSource;
 
+import org.restlet.resource.Get;
+import org.restlet.resource.Post;
+import org.restlet.resource.ServerResource;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -54,8 +61,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * @version $Id$
  */
-@Path("/ctakes")
-public class CTakesAnnotationService
+public class CTakesAnnotationService extends ServerResource
 {
     /**
      * The uima analysis engine in use.
@@ -73,21 +79,29 @@ public class CTakesAnnotationService
     private ObjectMapper om;
 
     /**
+     * A lucene index writer to use.
+     */
+    private IndexWriter writer;
+
+    /**
      * CTOR.
      */
     public CTakesAnnotationService()
     {
+        super();
+        writer = null;
         om = new ObjectMapper();
         URL engineXML = CTakesAnnotationService.class.getClassLoader().getResource("pipeline/AnalysisEngine.xml");
-        try {
+        ae = null;
+        jcas = null;
+        /*try {
             XMLInputSource in = new XMLInputSource(engineXML);
             ResourceSpecifier specifier = UIMAFramework.getXMLParser().parseResourceSpecifier(in);
             ae = UIMAFramework.produceAnalysisEngine(specifier);
             jcas = ae.newJCas();
         } catch (IOException | InvalidXMLException | ResourceInitializationException e) {
-            /* XXX ? */
             throw new RuntimeException(e.getMessage(), e);
-        }
+        }*/
     }
 
     /**
@@ -95,7 +109,7 @@ public class CTakesAnnotationService
      * @param text the text to annotate
      * @return the http response object
      */
-    @POST
+    @Post
     @Produces("application/json")
     @Consumes("application/x-www-form-urlencoded")
     public Response annotate(String text)
@@ -119,14 +133,29 @@ public class CTakesAnnotationService
         }
     }
 
+    @Get
+    public String test()
+    {
+        return "Hello world";
+    }
+
     /**
      * Fetch the HPO and reindex it.
      * @return whether it worked
      */
-    @POST
+    @Post
     public Response reindex()
     {
-        return null;
+        try {
+            URL url = new URL("https://compbio.charite.de/jenkins/job/hpo/lastStableBuild/artifact/hp/hp.owl");
+            Path temp = Files.createTempFile("hpoLoad", "owl");
+            FileUtils.copyURLToFile(url, temp.toFile());
+            CTakesLoader loader = new CTakesLoader(temp.toFile().toString(), writer);
+            loader.load();
+        } catch (IOException e) {
+            return Response.serverError().build();
+        }
+        return Response.ok().build();
     }
 
     /**

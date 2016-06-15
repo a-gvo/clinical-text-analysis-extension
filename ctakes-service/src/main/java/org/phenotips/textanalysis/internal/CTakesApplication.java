@@ -20,7 +20,10 @@ package org.phenotips.textanalysis.internal;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.ws.rs.core.Application;
+//import javax.ws.rs.core.Application;
+import org.restlet.Application;
+import org.restlet.Restlet;
+import org.restlet.routing.Router;
 
 /**
  * The basic application for our ctakes service.
@@ -30,10 +33,10 @@ import javax.ws.rs.core.Application;
 public class CTakesApplication extends Application
 {
     @Override
-    public Set<Class<?>> getClasses()
+    public synchronized Restlet createInboundRoot()
     {
-        Set<Class<?>> retval = new HashSet<>();
-        retval.add(CTakesAnnotationService.class);
-        return retval;
+        Router router = new Router(getContext());
+        router.attachDefault(CTakesAnnotationService.class);
+        return router;
     }
 }
