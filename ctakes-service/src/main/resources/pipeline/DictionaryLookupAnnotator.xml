@@ -117,7 +117,7 @@
               <nameValuePair>
                 <name>IndexDirectory</name>
                 <value>
-                  <string>data/solr/hpo/data/index</string>
+                  <string>data/ctakes/hpo</string>
                 </value>
               </nameValuePair>
             </configurationParameterSettings>
@@ -129,7 +129,7 @@
         <name>LookupDescriptorFile</name>
         <description/>
         <fileResourceSpecifier>
-          <fileUrl>file:./LookupDesc.xml</fileUrl>
+          <fileUrl>file:./webapps/ctakes/WEB-INF/classes/pipeline/LookupDesc.xml</fileUrl>
         </fileResourceSpecifier>
         <implementationName>org.apache.ctakes.core.resource.FileResourceImpl</implementationName>
       </externalResource>

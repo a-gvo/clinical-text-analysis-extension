@@ -51,7 +51,7 @@
 			<dictionaryRef idRef="DICT_HPO"/>
 			<lookupInitializer className="org.apache.ctakes.dictionary.lookup.ae.FirstTokenPermLookupInitializerImpl">
 				<properties>
-					<property key="textMetaFields" value="synonym|nameSpell|nameStub|nameExact|namePrefix|nameSort|synonymSpell|synonymStub|synonymExact|synonymPrefix|synonymSort|comment"/>
+					<property key="textMetaFields" value="synonym|label|definition"/>
 					<property key="maxPermutationLevel" value="7"/>
 					<property key="windowAnnotations" value="org.apache.ctakes.typesystem.type.textspan.Sentence"/>
                     <!--<property key="windowAnnotations" value="org.apache.ctakes.typesystem.type.textspan.LookupWindowAnnotation"/>  -->

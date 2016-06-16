@@ -17,12 +17,15 @@
  */
 package org.phenotips.textanalysis.internal;
 
+import java.io.File;
 import java.io.IOException;
 
 import java.net.URL;
 
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,7 +41,13 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.ctakes.typesystem.type.textsem.EntityMention;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.MMapDirectory;
+import org.apache.lucene.util.Version;
 import org.apache.uima.UIMAFramework;
 import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
@@ -64,6 +73,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class CTakesAnnotationService extends ServerResource
 {
     /**
+     * The location where the HPO index is.
+     */
+    private static final String INDEX_LOCATION = "data/ctakes/hpo";
+
+    /**
+     * A glob path matcher.
+     */
+    private static final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*{java,class}");
+
+    /**
      * The uima analysis engine in use.
      */
     private AnalysisEngine ae;
@@ -79,9 +98,14 @@ public class CTakesAnnotationService extends ServerResource
     private ObjectMapper om;
 
     /**
-     * A lucene index writer to use.
+     * Return whether the HPO has already been indexed.
      */
-    private IndexWriter writer;
+    private boolean isIndexed()
+    {
+        /* This is a little silly, but as far as I know it's how lucene itself actually checks. */
+        Path glob = new File(INDEX_LOCATION, "segments*").toPath();
+        return matcher.matches(glob) && false;
+    }
 
     /**
      * CTOR.
@@ -89,19 +113,31 @@ public class CTakesAnnotationService extends ServerResource
     public CTakesAnnotationService()
     {
         super();
-        writer = null;
         om = new ObjectMapper();
-        URL engineXML = CTakesAnnotationService.class.getClassLoader().getResource("pipeline/AnalysisEngine.xml");
-        ae = null;
-        jcas = null;
-        /*try {
+        try {
+            if (!isIndexed()) {
+                reindex();
+            }
+            URL engineXML = CTakesAnnotationService.class.getClassLoader().getResource("pipeline/AnalysisEngine.xml");
             XMLInputSource in = new XMLInputSource(engineXML);
             ResourceSpecifier specifier = UIMAFramework.getXMLParser().parseResourceSpecifier(in);
             ae = UIMAFramework.produceAnalysisEngine(specifier);
             jcas = ae.newJCas();
         } catch (IOException | InvalidXMLException | ResourceInitializationException e) {
             throw new RuntimeException(e.getMessage(), e);
-        }*/
+        }
+    }
+
+    /**
+     * Create a new index writer
+     * @return the index writer
+     */
+    private IndexWriter createIndexWriter() throws IOException
+    {
+        Directory directory = new MMapDirectory(new File(INDEX_LOCATION));
+        Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_40);
+        IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_40, analyzer);
+        return new IndexWriter(directory, config);
     }
 
     /**
@@ -147,11 +183,14 @@ public class CTakesAnnotationService extends ServerResource
     public Response reindex()
     {
         try {
+            IndexWriter writer = createIndexWriter();
             URL url = new URL("https://compbio.charite.de/jenkins/job/hpo/lastStableBuild/artifact/hp/hp.owl");
-            Path temp = Files.createTempFile("hpoLoad", "owl");
+            Path temp = Files.createTempFile("hpoLoad", ".owl");
             FileUtils.copyURLToFile(url, temp.toFile());
             CTakesLoader loader = new CTakesLoader(temp.toFile().toString(), writer);
             loader.load();
+            writer.commit();
+            writer.close();
         } catch (IOException e) {
             return Response.serverError().build();
         }

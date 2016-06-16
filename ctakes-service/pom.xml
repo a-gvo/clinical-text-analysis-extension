@@ -71,9 +71,20 @@
       <version>3.6.9.Final</version>
     </dependency>
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>18.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.ctakes</groupId>
       <artifactId>ctakes-core</artifactId>
       <version>3.2.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.ctakes</groupId>
@@ -100,6 +111,11 @@
       <artifactId>ctakes-lvg</artifactId>
       <version>3.2.2</version>
     </dependency>-->
+    <dependency>
+      <groupId>commons-validator</groupId>
+      <artifactId>commons-validator</artifactId>
+      <version>1.5.1</version>
+    </dependency>
     <dependency>
       <groupId>org.restlet.jse</groupId>
       <artifactId>org.restlet</artifactId>
@@ -138,7 +154,7 @@
     <dependency>
       <groupId>net.sourceforge.owlapi</groupId>
       <artifactId>owlapi-distribution</artifactId>
-      <version>5.0.2</version>
+      <version>4.2.4</version>
     </dependency>
   </dependencies>
   <properties>

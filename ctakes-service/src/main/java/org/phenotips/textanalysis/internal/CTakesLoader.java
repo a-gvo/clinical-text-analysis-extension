@@ -30,6 +30,7 @@ import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 import org.semanticweb.owlapi.util.OWLOntologyWalker;
+import org.semanticweb.owlapi.model.OWLObject;
 
 
 /**
@@ -68,6 +69,15 @@ public class CTakesLoader
     {
         try {
             ontology.accept(visitor);
+            for (OWLObject object : ontology.getNestedClassExpressions()) {
+                object.accept(visitor);
+            }
+            for (OWLObject object : ontology.getClassesInSignature()) {
+                object.accept(visitor);
+            }
+            for (OWLObject object : ontology.getAxioms()) {
+                object.accept(visitor);
+            }
             indexWriter.addDocuments(visitor.getDocuments());
         } catch (IOException e) {
             /* XXX */
