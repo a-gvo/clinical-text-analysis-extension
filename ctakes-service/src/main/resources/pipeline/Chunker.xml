@@ -20,71 +20,71 @@
 
 -->
 <analysisEngineDescription xmlns="http://uima.apache.org/resourceSpecifier">
-	<frameworkImplementation>org.apache.uima.java</frameworkImplementation>
-	<primitive>true</primitive>
-	<annotatorImplementationName>org.apache.ctakes.chunker.ae.Chunker
-	</annotatorImplementationName>
-	<analysisEngineMetaData>
-		<name>Chunker</name>
-		<description></description>
-		<version>1.0</version>
-		<vendor></vendor>
-		<configurationParameters>
-			<configurationParameter>
-				<name>ChunkerModelFile</name>
-				<type>String</type>
-				<multiValued>false</multiValued>
-				<mandatory>true</mandatory>
-			</configurationParameter>
-			<configurationParameter>
-				<name>ChunkCreatorClass</name>
-				<type>String</type>
-				<multiValued>false</multiValued>
-				<mandatory>true</mandatory>
-			</configurationParameter>
-		</configurationParameters>
-		<configurationParameterSettings>
-			<nameValuePair>
-				<name>ChunkerModelFile</name>
-				<value>
-					<string>org/apache/ctakes/chunker/models/chunker-model.zip
-					</string>
-				</value>
-			</nameValuePair>
-			<nameValuePair>
-				<name>ChunkCreatorClass</name>
-				<value>
-					<string>org.apache.ctakes.chunker.ae.DefaultChunkCreator</string>
-				</value>
-			</nameValuePair>
-		</configurationParameterSettings>
-		<typeSystemDescription>
-			<imports>
-				<import name="org.apache.ctakes.typesystem.types.TypeSystem" />
-			</imports>
-		</typeSystemDescription>
-		<typePriorities>
-			<name>Ordering</name>
-			<description>For subiterator</description>
-			<version>1.0</version>
-			<priorityList>
-				<type>org.apache.ctakes.typesystem.type.textspan.Segment</type>
-				<type>org.apache.ctakes.typesystem.type.textspan.Sentence</type>
-				<type>org.apache.ctakes.typesystem.type.syntax.BaseToken</type>
-			</priorityList>
-		</typePriorities>
-		<fsIndexCollection />
-		<capabilities>
-			<capability>
-				<inputs />
-				<outputs />
-				<languagesSupported />
-			</capability>
-		</capabilities>
-		<operationalProperties>
-			<modifiesCas>true</modifiesCas>
-			<multipleDeploymentAllowed>true</multipleDeploymentAllowed>
-			<outputsNewCASes>false</outputsNewCASes>
-		</operationalProperties>
-	</analysisEngineMetaData>
+    <frameworkImplementation>org.apache.uima.java</frameworkImplementation>
+    <primitive>true</primitive>
+    <annotatorImplementationName>org.apache.ctakes.chunker.ae.Chunker
+    </annotatorImplementationName>
+    <analysisEngineMetaData>
+        <name>Chunker</name>
+        <description></description>
+        <version>1.0</version>
+        <vendor></vendor>
+        <configurationParameters>
+            <configurationParameter>
+                <name>ChunkerModelFile</name>
+                <type>String</type>
+                <multiValued>false</multiValued>
+                <mandatory>true</mandatory>
+            </configurationParameter>
+            <configurationParameter>
+                <name>ChunkCreatorClass</name>
+                <type>String</type>
+                <multiValued>false</multiValued>
+                <mandatory>true</mandatory>
+            </configurationParameter>
+        </configurationParameters>
+        <configurationParameterSettings>
+            <nameValuePair>
+                <name>ChunkerModelFile</name>
+                <value>
+                    <string>org/apache/ctakes/chunker/models/chunker-model.zip
+                    </string>
+                </value>
+            </nameValuePair>
+            <nameValuePair>
+                <name>ChunkCreatorClass</name>
+                <value>
+                    <string>org.apache.ctakes.chunker.ae.DefaultChunkCreator</string>
+                </value>
+            </nameValuePair>
+        </configurationParameterSettings>
+        <typeSystemDescription>
+            <imports>
+                <import name="org.apache.ctakes.typesystem.types.TypeSystem" />
+            </imports>
+        </typeSystemDescription>
+        <typePriorities>
+            <name>Ordering</name>
+            <description>For subiterator</description>
+            <version>1.0</version>
+            <priorityList>
+                <type>org.apache.ctakes.typesystem.type.textspan.Segment</type>
+                <type>org.apache.ctakes.typesystem.type.textspan.Sentence</type>
+                <type>org.apache.ctakes.typesystem.type.syntax.BaseToken</type>
+            </priorityList>
+        </typePriorities>
+        <fsIndexCollection />
+        <capabilities>
+            <capability>
+                <inputs />
+                <outputs />
+                <languagesSupported />
+            </capability>
+        </capabilities>
+        <operationalProperties>
+            <modifiesCas>true</modifiesCas>
+            <multipleDeploymentAllowed>true</multipleDeploymentAllowed>
+            <outputsNewCASes>false</outputsNewCASes>
+        </operationalProperties>
+    </analysisEngineMetaData>
 </analysisEngineDescription>
