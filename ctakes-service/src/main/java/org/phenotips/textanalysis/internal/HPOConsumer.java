@@ -29,6 +29,7 @@ import org.apache.ctakes.typesystem.type.refsem.OntologyConcept;
 import org.apache.ctakes.typesystem.type.textsem.EntityMention;
 import org.apache.uima.UimaContext;
 import org.apache.uima.jcas.JCas;
+import org.apache.uima.jcas.cas.FSArray;
 
 /**
  * A consumer that takes dictionary hits and adds them to a jcas as ontology concepts mapped to the hpo.
@@ -77,10 +78,12 @@ public class HPOConsumer extends BaseLookupConsumerImpl
             OntologyConcept concept = getOntologyConcept(jcas, hit);
             Entity e = new Entity(jcas);
             EntityMention annotation = new EntityMention(jcas, hit.getStartOffset(), hit.getEndOffset());
+            FSArray array = new FSArray(jcas, 1);
+            array.set(0, concept);
 
             e.setOntologyConcept(concept);
             annotation.setDiscoveryTechnique(CONST.NE_DISCOVERY_TECH_DICT_LOOKUP);
-            annotation.setOntologyConceptArr(1, concept);
+            annotation.setOntologyConceptArr(array);
             annotation.setEntity(e);
             annotation.addToIndexes();
         }

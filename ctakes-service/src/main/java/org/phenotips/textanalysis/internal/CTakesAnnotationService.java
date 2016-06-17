@@ -35,10 +35,12 @@ import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.ctakes.typesystem.type.textsem.EntityMention;
 import org.apache.lucene.analysis.Analyzer;
@@ -58,8 +60,10 @@ import org.apache.uima.resource.ResourceSpecifier;
 import org.apache.uima.util.InvalidXMLException;
 import org.apache.uima.util.XMLInputSource;
 
+import org.restlet.data.Form;
 import org.restlet.resource.Get;
 import org.restlet.resource.Post;
+import org.restlet.resource.ResourceException;
 import org.restlet.resource.ServerResource;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -98,13 +102,16 @@ public class CTakesAnnotationService extends ServerResource
     private ObjectMapper om;
 
     /**
+     * Marks whether the index exists.
+     */
+    private File marker;
+
+    /**
      * Return whether the HPO has already been indexed.
      */
     private boolean isIndexed()
     {
-        /* This is a little silly, but as far as I know it's how lucene itself actually checks. */
-        Path glob = new File(INDEX_LOCATION, "segments*").toPath();
-        return matcher.matches(glob) && false;
+        return marker.exists();
     }
 
     /**
@@ -114,6 +121,7 @@ public class CTakesAnnotationService extends ServerResource
     {
         super();
         om = new ObjectMapper();
+        marker = new File(INDEX_LOCATION, ".ctakes_indexed");
         try {
             if (!isIndexed()) {
                 reindex();
@@ -148,11 +156,13 @@ public class CTakesAnnotationService extends ServerResource
     @Post
     @Produces("application/json")
     @Consumes("application/x-www-form-urlencoded")
-    public Response annotate(String text)
+    public List<Map<String, Object>> annotate(Form form)
     {
+        String content = form.getFirstValue("content");
         try {
-            List<EntityMention> annotations = annotateText(text);
+            List<EntityMention> annotations = annotateText(content);
             List<Map<String, Object>> transformed = new ArrayList<>(annotations.size());
+            System.out.println(content);
             for (EntityMention annotation : annotations) {
                 Map<String, Object> map = new HashMap<>(3);
                 map.put("start", annotation.getBegin());
@@ -161,11 +171,11 @@ public class CTakesAnnotationService extends ServerResource
                 token.put("id", annotation.getEntity().getOntologyConcept().getCode());
                 map.put("token", token);
                 transformed.add(map);
+                MapUtils.debugPrint(System.out, "Result", map);
             }
-            byte[] retval = om.writeValueAsBytes(transformed);
-            return Response.ok(retval, MediaType.APPLICATION_JSON).build();
-        } catch (AnalysisEngineProcessException | JsonProcessingException e) {
-            return Response.serverError().entity(e.getMessage()).build();
+            return transformed;
+        } catch (AnalysisEngineProcessException e) {
+            throw new ResourceException(e);
         }
     }
 
@@ -179,22 +189,29 @@ public class CTakesAnnotationService extends ServerResource
      * Fetch the HPO and reindex it.
      * @return whether it worked
      */
-    @Post
-    public Response reindex()
+    @Post("json")
+    public Map<String, Object> reindex()
     {
-        try {
-            IndexWriter writer = createIndexWriter();
-            URL url = new URL("https://compbio.charite.de/jenkins/job/hpo/lastStableBuild/artifact/hp/hp.owl");
-            Path temp = Files.createTempFile("hpoLoad", ".owl");
-            FileUtils.copyURLToFile(url, temp.toFile());
-            CTakesLoader loader = new CTakesLoader(temp.toFile().toString(), writer);
-            loader.load();
-            writer.commit();
-            writer.close();
-        } catch (IOException e) {
-            return Response.serverError().build();
+        synchronized(CTakesAnnotationService.class) {
+            try {
+                IndexWriter writer = createIndexWriter();
+                URL url = new URL("https://compbio.charite.de/jenkins/job/hpo/lastStableBuild/artifact/hp/hp.owl");
+                Path temp = Files.createTempFile("hpoLoad", ".owl");
+                FileUtils.copyURLToFile(url, temp.toFile());
+                CTakesLoader loader = new CTakesLoader(temp.toFile().toString(), writer);
+                loader.load();
+                writer.commit();
+                writer.close();
+                if(!marker.exists()) {
+                    marker.createNewFile();
+                }
+                Map<String, Object> retval = new HashMap<>(1);
+                retval.put("success", true);
+                return retval;
+            } catch (IOException e) {
+                throw new ResourceException(e);
+            }
         }
-        return Response.ok().build();
     }
 
     /**
@@ -205,9 +222,9 @@ public class CTakesAnnotationService extends ServerResource
      */
     private List<EntityMention> annotateText(String text) throws AnalysisEngineProcessException
     {
+        jcas.reset();
         jcas.setDocumentText(text);
         ae.process(jcas);
-        jcas.reset();
         List<EntityMention> mentions = new LinkedList<>();
         Iterator<Annotation> iter = jcas.getAnnotationIndex(EntityMention.type).iterator();
         while (iter.hasNext()) {

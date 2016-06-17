@@ -87,15 +87,15 @@
 		</configurationParameterSettings>
 		<flowConstraints>
 			<fixedFlow>
-				<node>SimpleSegmentAnnotator</node>
+                <node>SimpleSegmentAnnotator</node>
 				<node>SentenceDetectorAnnotator</node>
-				<node>TokenizerAnnotator</node>
+                <node>TokenizerAnnotator</node>
                 <!--<node>LvgAnnotator</node>-->
-				<node>ContextDependentTokenizerAnnotator</node>
+                <!--<node>ContextDependentTokenizerAnnotator</node>
 				<node>POSTagger</node>
 				<node>Chunker</node>
 				<node>AdjustNounPhraseToIncludeFollowingNP</node>
-				<node>AdjustNounPhraseToIncludeFollowingPPNP</node>
+                <node>AdjustNounPhraseToIncludeFollowingPPNP</node>-->
 				<node>DictionaryLookupAnnotator</node>
 			</fixedFlow>
 		</flowConstraints>
