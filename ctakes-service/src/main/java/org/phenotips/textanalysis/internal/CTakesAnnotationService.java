@@ -45,6 +45,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.ctakes.typesystem.type.textsem.EntityMention;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
@@ -102,16 +103,16 @@ public class CTakesAnnotationService extends ServerResource
     private ObjectMapper om;
 
     /**
-     * Marks whether the index exists.
+     * The directory where the lucene index is contained.
      */
-    private File marker;
+    private Directory indexDirectory;
 
     /**
      * Return whether the HPO has already been indexed.
      */
     private boolean isIndexed()
     {
-        return marker.exists();
+        return DirectoryReader.indexExists(indexDirectory);
     }
 
     /**
@@ -121,8 +122,8 @@ public class CTakesAnnotationService extends ServerResource
     {
         super();
         om = new ObjectMapper();
-        marker = new File(INDEX_LOCATION, ".ctakes_indexed");
         try {
+            indexDirectory = new MMapDirectory(new File(INDEX_LOCATION));
             if (!isIndexed()) {
                 reindex();
             }
@@ -142,10 +143,9 @@ public class CTakesAnnotationService extends ServerResource
      */
     private IndexWriter createIndexWriter() throws IOException
     {
-        Directory directory = new MMapDirectory(new File(INDEX_LOCATION));
         Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_40);
         IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_40, analyzer);
-        return new IndexWriter(directory, config);
+        return new IndexWriter(indexDirectory, config);
     }
 
     /**
@@ -171,7 +171,6 @@ public class CTakesAnnotationService extends ServerResource
                 token.put("id", annotation.getEntity().getOntologyConcept().getCode());
                 map.put("token", token);
                 transformed.add(map);
-                MapUtils.debugPrint(System.out, "Result", map);
             }
             return transformed;
         } catch (AnalysisEngineProcessException e) {
@@ -202,9 +201,6 @@ public class CTakesAnnotationService extends ServerResource
                 loader.load();
                 writer.commit();
                 writer.close();
-                if(!marker.exists()) {
-                    marker.createNewFile();
-                }
                 Map<String, Object> retval = new HashMap<>(1);
                 retval.put("success", true);
                 return retval;

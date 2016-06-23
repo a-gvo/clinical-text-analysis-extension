@@ -71,6 +71,9 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
      */
     private static final Set<String> LABEL_FIELDS;
 
+    /**
+     * The field containing the namespace in the HPO.
+     */
     private static final String NAMESPACE_FIELD = "oboInOwl#hasOBONamespace";
 
     /**
@@ -98,12 +101,15 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
      */
     private static final String SYNONYM_IDX_NAME = "synonym";
 
+    /**
+     * The napespace that indexed documents should belong to.
+     */
     private static final String NAMESPACE = "human_phenotype";
 
     /**
      * The documents that will be indexed in the end.
      */
-    private Map<String, Map<String, String>> documents;
+    private Map<String, Map<String, List<String>>> documents;
 
     static
     {
@@ -132,6 +138,7 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
 
     /**
      * Parse the iri given, and return the last component thereof.
+     * @param iri the iri to parse
      */
     private String getIRIName(String iri)
     {
@@ -141,10 +148,14 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
         return iri;
     }
 
-    private void addTo(Map<String, String> propertyMap, String name, String value)
+    private void addTo(Map<String, List<String>> propertyMap, String name, String value)
     {
-        String there = propertyMap.get(name) + "\n" + value;
-        propertyMap.put(name, there);
+        List<String> there = propertyMap.get(name);
+        if (there == null) {
+            there = new ArrayList<>();
+            propertyMap.put(name, there);
+        }
+        there.add(value);
     }
 
     /**
@@ -157,14 +168,12 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
             iri = iri.substring(1, iri.length() - 1);
         }
         iri = getIRIName(iri);
-        Map<String, String> propertyMap = documents.get(id);
+        Map<String, List<String>> propertyMap = documents.get(id);
         if (propertyMap == null) {
             propertyMap = new HashMap<>();
             documents.put(id, propertyMap);
-            propertyMap.put(ID_IDX_NAME, id);
-            propertyMap.put(DEFINITION_IDX_NAME, "");
-            propertyMap.put(SYNONYM_IDX_NAME, "");
-            propertyMap.put(LABEL_IDX_NAME, "");
+            propertyMap.put(ID_IDX_NAME, new ArrayList<String>());
+            propertyMap.get(ID_IDX_NAME).add(id);
         }
         if (DEFINITION_FIELDS.contains(iri)) {
             addTo(propertyMap, DEFINITION_IDX_NAME, value);
@@ -176,7 +185,7 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
             addTo(propertyMap, LABEL_IDX_NAME, value);
         }
         if (NAMESPACE_FIELD.equals(iri)) {
-            propertyMap.put(iri, value);
+            addTo(propertyMap, iri, value);
         }
     }
 
@@ -210,15 +219,24 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     public Iterable<? extends Iterable<? extends IndexableField>> getDocuments()
     {
         List<List<IndexableField>> retval = new ArrayList<>(documents.size());
-        for (Map<String, String> document : documents.values()) {
-            if (!NAMESPACE.equals(document.get(NAMESPACE_FIELD))) {
+        for (Map<String, List<String>> document : documents.values()) {
+            if (document.get(NAMESPACE_FIELD) == null ||
+                !NAMESPACE.equals(document.get(NAMESPACE_FIELD).get(0))) {
                 continue;
             }
             List<IndexableField> doc = new ArrayList<>(document.size());
-            doc.add(new StringField(ID_IDX_NAME, document.get(ID_IDX_NAME).trim(), Store.YES));
-            doc.add(new TextField(DEFINITION_IDX_NAME, document.get(DEFINITION_IDX_NAME).trim(), Store.YES));
-            doc.add(new TextField(LABEL_IDX_NAME, document.get(LABEL_IDX_NAME).trim(), Store.YES));
-            doc.add(new TextField(SYNONYM_IDX_NAME, document.get(SYNONYM_IDX_NAME).trim(), Store.YES));
+            String[] fields = { DEFINITION_IDX_NAME, LABEL_IDX_NAME, SYNONYM_IDX_NAME };
+            doc.add(new StringField(ID_IDX_NAME, document.get(ID_IDX_NAME).get(0), Store.YES));
+            for (String field : fields) {
+                List<String> values = document.get(field);
+                if (values != null) {
+                    for (int i = 0; i < values.size(); i++) {
+                        String value = values.get(i);
+                        String fieldName = (i == 0 ? field : field + i);
+                        doc.add(new TextField(fieldName, value, Store.YES));
+                    }
+                }
+            }
             retval.add(doc);
         }
         return retval;

@@ -52,6 +52,12 @@ public class CTakesLoader
 
     private IndexWriter indexWriter;
 
+    /**
+     * Construct a new loader.
+     *
+     * @param ontologyLocation where we can find the ontology.
+     * @param writer the lucene index writer to use
+     */
     public CTakesLoader(String ontologyLocation, IndexWriter writer)
     {
         manager = OWLManager.createOWLOntologyManager();
@@ -65,6 +71,9 @@ public class CTakesLoader
         indexWriter = writer;
     }
 
+    /**
+     * Load the HPO into a lucene index.
+     */
     public void load()
     {
         try {
