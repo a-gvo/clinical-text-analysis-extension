@@ -36,6 +36,8 @@ import org.semanticweb.owlapi.model.OWLAnnotationAssertionAxiom;
 import org.semanticweb.owlapi.model.OWLDataProperty;
 import org.semanticweb.owlapi.model.OWLDataPropertyAssertionAxiom;
 import org.semanticweb.owlapi.model.OWLLiteral;
+import org.semanticweb.owlapi.model.OWLOntology;
+import org.semanticweb.owlapi.model.OWLSubClassOfAxiom;
 import org.semanticweb.owlapi.util.OWLOntologyWalker;
 import org.semanticweb.owlapi.util.OWLOntologyWalkerVisitor;
 
@@ -74,6 +76,11 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     private static final String NAMESPACE_FIELD = "oboInOwl#hasOBONamespace";
 
     /**
+     * The field containing the parent of the phenotype.
+     */
+    private static final String PARENT_FIELD = "rdfs:subClassOf";
+
+    /**
      * A validator for urls.
      */
     private static final UrlValidator URL_VALIDATOR = UrlValidator.getInstance();
@@ -109,9 +116,16 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     private static final String NAMESPACE = "human_phenotype";
 
     /**
+     * The root of the phenotipic abnormality tree.
+     */
+    private static final String ABNROMALITY_ROOT_ID = "HP_0000118";
+
+    /**
      * The documents that will be indexed in the end.
      */
     private Map<String, Phenotype> documents;
+
+    private OWLOntology ontology;
 
     /**
      * A class representing a single phenotype found in the HPO.
@@ -145,6 +159,11 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
         public String namespace;
 
         /**
+         * The parent of this phenotype.
+         */
+        public List<String> parents;
+
+        /**
          * CTOR.
          *
          * @param id the id of the new phenotype.
@@ -155,6 +174,7 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
             synonyms = new ArrayList<>();
             definition = "";
             namespace = "";
+            parents = new ArrayList<>();
         }
 
         /**
@@ -200,6 +220,7 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     public CTakesOWLVisitor(OWLOntologyWalker walker)
     {
         super(walker);
+        ontology = walker.getOntology();
         documents = new HashMap<>(INITIAL_MAP_SIZE);
     }
 
@@ -220,6 +241,21 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     }
 
     /**
+     * Get or create the phenotype with the id given.
+     * @param id the phenotype's id
+     * @return the phenotype object.
+     */
+    private Phenotype getOrCreate(String id)
+    {
+        Phenotype phenotype = documents.get(id);
+        if (phenotype == null) {
+            phenotype = new Phenotype(id);
+            documents.put(id, phenotype);
+        }
+        return phenotype;
+    }
+
+    /**
      * Add the property with the IRI given to the dictionary for the id given.
      *
      * @param phenotypeId the id of the phenotype we're adding to
@@ -230,11 +266,7 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     {
         String id = getIRIName(phenotypeId);
         String iri = getIRIName(propIri);
-        Phenotype phenotype = documents.get(id);
-        if (phenotype == null) {
-            phenotype = new Phenotype(id);
-            documents.put(id, phenotype);
-        }
+        Phenotype phenotype = getOrCreate(id);
         if (DEFINITION_FIELDS.contains(iri)) {
             phenotype.definition += System.lineSeparator() + value;
         }
@@ -272,6 +304,40 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
         addProperty(id, propertyName, value);
     }
 
+    @Override
+    public void visit(OWLSubClassOfAxiom axiom)
+    {
+        String id = getIRIName(axiom.getSubClass().toString());
+        String parent = getIRIName(axiom.getSuperClass().toString());
+        Phenotype phenotype = getOrCreate(id);
+        phenotype.parents.add(parent);
+    }
+
+    /**
+     * Return whether the phenotype given is a phenotypic abnormality.
+     * @param phenotype the phenotype to test
+     * @param abnormalities a map containing prior results, for memoization
+     * @return whether it is an abnormality
+     */
+    private boolean isPhenotypicAbnormality(Phenotype phenotype, Map<String, Boolean> abnormalities)
+    {
+        Boolean isIt = abnormalities.get(phenotype.id);
+        if (isIt == null) {
+            isIt = false;
+            for (String parentId : phenotype.parents) {
+                Phenotype parent = documents.get(parentId);
+                if (parent != null) {
+                    isIt = isPhenotypicAbnormality(parent, abnormalities);
+                    if (isIt) {
+                        break;
+                    }
+                }
+            }
+            abnormalities.put(phenotype.id, isIt);
+        }
+        return isIt;
+    }
+
     /**
      * Get the documents that lucene should index.
      * @return the documents
@@ -279,8 +345,11 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     public Iterable<? extends Iterable<? extends IndexableField>> getDocuments()
     {
         List<List<IndexableField>> retval = new ArrayList<>(documents.size());
+        Map<String, Boolean> abnormalities = new HashMap<>(documents.size());
+        abnormalities.put(ABNROMALITY_ROOT_ID, true);
         for (Phenotype phenotype : documents.values()) {
-            if (NAMESPACE.equals(phenotype.namespace)) {
+            if (NAMESPACE.equals(phenotype.namespace)
+                && isPhenotypicAbnormality(phenotype, abnormalities)) {
                 retval.add(phenotype.toDocument());
             }
         }
