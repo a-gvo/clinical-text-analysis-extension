@@ -17,10 +17,6 @@
  */
 package org.phenotips.textanalysis.internal;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
@@ -153,7 +149,7 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
          *
          * @param id the id of the new phenotype.
          */
-        public Phenotype(String id)
+        Phenotype(String id)
         {
             this.id = id;
             synonyms = new ArrayList<>();
@@ -169,8 +165,9 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
             List<IndexableField> doc = new ArrayList<>(synonyms.size() + 3);
             doc.add(new StringField(ID_IDX_NAME, id, Store.YES));
             doc.add(new TextField(LABEL_IDX_NAME, label, Store.YES));
-            String joinedSynonyms = StringUtils.join(synonyms, "\n");
-            String text = (definition.trim() + "\n" + joinedSynonyms + "\n" + label).trim();
+            String joinedSynonyms = StringUtils.join(synonyms, System.lineSeparator());
+            String text = (definition.trim() + System.lineSeparator() + joinedSynonyms
+                           + System.lineSeparator() + label).trim();
             doc.add(new TextField(TEXT_IDX_NAME, text, Store.YES));
             for (int i = 0; i < synonyms.size(); i++) {
                 String synonym = synonyms.get(i);
@@ -195,7 +192,7 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
         LABEL_FIELDS = new HashSet<>(1);
         LABEL_FIELDS.add("rdfs:label");
     }
-    
+
     /**
      * CTOR.
      * @param walker the OWLOntologyWalker to traverse the ontology.
@@ -212,33 +209,34 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
      */
     private String getIRIName(String iri)
     {
-        if (iri.matches("^<.*>$")) {
-            iri = iri.substring(1, iri.length() - 1);
+        String retval = iri;
+        if (retval.matches("^<.*>$")) {
+            retval = retval.substring(1, iri.length() - 1);
         }
-        if(URL_VALIDATOR.isValid(iri)) {
-            iri = iri.substring(iri.lastIndexOf('/') + 1);
+        if (URL_VALIDATOR.isValid(retval)) {
+            retval = retval.substring(retval.lastIndexOf('/') + 1);
         }
-        return iri;
+        return retval;
     }
 
     /**
      * Add the property with the IRI given to the dictionary for the id given.
      *
-     * @param id the id of the phenotype we're adding to
-     * @param iri the iri of the property
+     * @param phenotypeId the id of the phenotype we're adding to
+     * @param propIri the iri of the property
      * @param value the value of the property
      */
-    private void addProperty(String id, String iri, String value)
+    private void addProperty(String phenotypeId, String propIri, String value)
     {
-        id = getIRIName(id);
-        iri = getIRIName(iri);
+        String id = getIRIName(phenotypeId);
+        String iri = getIRIName(propIri);
         Phenotype phenotype = documents.get(id);
         if (phenotype == null) {
             phenotype = new Phenotype(id);
             documents.put(id, phenotype);
         }
         if (DEFINITION_FIELDS.contains(iri)) {
-            phenotype.definition += "\n" + value;
+            phenotype.definition += System.lineSeparator() + value;
         }
         if (SYNONYM_FIELDS.contains(iri)) {
             phenotype.synonyms.add(value);
@@ -254,7 +252,7 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     @Override
     public void visit(OWLAnnotationAssertionAxiom axiom)
     {
-        if(axiom.getSubject() instanceof IRI) {
+        if (axiom.getSubject() instanceof IRI) {
             String id = ((IRI) axiom.getSubject()).toString();
             if (axiom.getValue() instanceof OWLLiteral) {
                 String property = axiom.getProperty().toString();

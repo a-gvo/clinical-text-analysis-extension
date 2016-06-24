@@ -17,10 +17,6 @@
  */
 package org.phenotips.textanalysis.internal;
 
-import java.util.HashSet;
-import java.util.Set;
-
-//import javax.ws.rs.core.Application;
 import org.restlet.Application;
 import org.restlet.Restlet;
 import org.restlet.routing.Router;

@@ -23,14 +23,19 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.util.Version;
 
 import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.model.OWLObject;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 import org.semanticweb.owlapi.util.OWLOntologyWalker;
-import org.semanticweb.owlapi.model.OWLObject;
 
 
 /**
@@ -52,13 +57,16 @@ public class CTakesLoader
 
     private IndexWriter indexWriter;
 
+    private Directory indexDirectory;
+
     /**
      * Construct a new loader.
      *
      * @param ontologyLocation where we can find the ontology.
-     * @param writer the lucene index writer to use
+     * @param indexDirectory the directory where we can find the index
+     * @throws IOException if lucene throws on index writer creation
      */
-    public CTakesLoader(String ontologyLocation, IndexWriter writer)
+    public CTakesLoader(String ontologyLocation, Directory indexDirectory) throws IOException
     {
         manager = OWLManager.createOWLOntologyManager();
         location = ontologyLocation;
@@ -68,7 +76,19 @@ public class CTakesLoader
         walker = new OWLOntologyWalker(set);
         visitor = new CTakesOWLVisitor(walker);
         /* Ontology doesn't look like a word anymore... */
-        indexWriter = writer;
+        this.indexDirectory = indexDirectory;
+        indexWriter = createIndexWriter();
+    }
+
+    /**
+     * Create a new index writer.
+     * @return the index writer
+     */
+    private IndexWriter createIndexWriter() throws IOException
+    {
+        Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_40);
+        IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_40, analyzer);
+        return new IndexWriter(indexDirectory, config);
     }
 
     /**
@@ -94,11 +114,24 @@ public class CTakesLoader
         }
     }
 
+    /**
+     * Close this loader.
+     * @throws IOException if lucene throws.
+     */
+    public void close() throws IOException
+    {
+        indexWriter.commit();
+        indexWriter.close();
+    }
+
+    /**
+     * Construct an owl ontology and return it.
+     */
     private OWLOntology getOntology()
     {
         try {
             return manager.loadOntologyFromOntologyDocument(new File(location));
-        } catch(OWLOntologyCreationException e) {
+        } catch (OWLOntologyCreationException e) {
             throw new RuntimeException(e.getMessage(), e);
         }
     }

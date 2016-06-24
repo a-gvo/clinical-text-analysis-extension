@@ -22,35 +22,23 @@ import java.io.IOException;
 
 import java.net.URL;
 
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.Consumes;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.ctakes.typesystem.type.textsem.EntityMention;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.MMapDirectory;
-import org.apache.lucene.util.Version;
 import org.apache.uima.UIMAFramework;
 import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
@@ -62,13 +50,10 @@ import org.apache.uima.util.InvalidXMLException;
 import org.apache.uima.util.XMLInputSource;
 
 import org.restlet.data.Form;
-import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.ResourceException;
 import org.restlet.resource.ServerResource;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Annotates free text using apache ctakes.
@@ -83,11 +68,6 @@ public class CTakesAnnotationService extends ServerResource
     private static final String INDEX_LOCATION = "data/ctakes/hpo";
 
     /**
-     * A glob path matcher.
-     */
-    private static final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*{java,class}");
-
-    /**
      * The uima analysis engine in use.
      */
     private AnalysisEngine ae;
@@ -98,22 +78,9 @@ public class CTakesAnnotationService extends ServerResource
     private JCas jcas;
 
     /**
-     * The object mapper to use for json serialization.
-     */
-    private ObjectMapper om;
-
-    /**
      * The directory where the lucene index is contained.
      */
     private Directory indexDirectory;
-
-    /**
-     * Return whether the HPO has already been indexed.
-     */
-    private boolean isIndexed()
-    {
-        return DirectoryReader.indexExists(indexDirectory);
-    }
 
     /**
      * CTOR.
@@ -121,7 +88,6 @@ public class CTakesAnnotationService extends ServerResource
     public CTakesAnnotationService()
     {
         super();
-        om = new ObjectMapper();
         try {
             indexDirectory = new MMapDirectory(new File(INDEX_LOCATION));
             if (!isIndexed()) {
@@ -138,19 +104,16 @@ public class CTakesAnnotationService extends ServerResource
     }
 
     /**
-     * Create a new index writer
-     * @return the index writer
+     * Return whether the HPO has already been indexed.
      */
-    private IndexWriter createIndexWriter() throws IOException
+    private boolean isIndexed()
     {
-        Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_40);
-        IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_40, analyzer);
-        return new IndexWriter(indexDirectory, config);
+        return DirectoryReader.indexExists(indexDirectory);
     }
 
     /**
      * Annotate the text given.
-     * @param text the text to annotate
+     * @param form the urlencoded form containing params
      * @return the http response object
      */
     @Post
@@ -177,12 +140,6 @@ public class CTakesAnnotationService extends ServerResource
         }
     }
 
-    @Get
-    public String test()
-    {
-        return "Hello world";
-    }
-
     /**
      * Fetch the HPO and reindex it.
      * @return whether it worked
@@ -190,16 +147,14 @@ public class CTakesAnnotationService extends ServerResource
     @Post("json")
     public Map<String, Object> reindex()
     {
-        synchronized(CTakesAnnotationService.class) {
+        synchronized (CTakesAnnotationService.class) {
             try {
-                IndexWriter writer = createIndexWriter();
                 URL url = new URL("https://compbio.charite.de/jenkins/job/hpo/lastStableBuild/artifact/hp/hp.owl");
                 Path temp = Files.createTempFile("hpoLoad", ".owl");
                 FileUtils.copyURLToFile(url, temp.toFile());
-                CTakesLoader loader = new CTakesLoader(temp.toFile().toString(), writer);
+                CTakesLoader loader = new CTakesLoader(temp.toFile().toString(), indexDirectory);
                 loader.load();
-                writer.commit();
-                writer.close();
+                loader.close();
                 Map<String, Object> retval = new HashMap<>(1);
                 retval.put("success", true);
                 return retval;
@@ -220,7 +175,7 @@ public class CTakesAnnotationService extends ServerResource
         jcas.reset();
         jcas.setDocumentText(text);
         ae.process(jcas);
-        List<EntityMention> mentions = new LinkedList<>();
+        List<EntityMention> mentions = new ArrayList<>();
         Iterator<Annotation> iter = jcas.getAnnotationIndex(EntityMention.type).iterator();
         while (iter.hasNext()) {
             mentions.add((EntityMention) iter.next());
