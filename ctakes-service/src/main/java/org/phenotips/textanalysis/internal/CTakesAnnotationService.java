@@ -162,7 +162,6 @@ public class CTakesAnnotationService extends ServerResource
         try {
             List<EntityMention> annotations = annotateText(content);
             List<Map<String, Object>> transformed = new ArrayList<>(annotations.size());
-            System.out.println(content);
             for (EntityMention annotation : annotations) {
                 Map<String, Object> map = new HashMap<>(3);
                 map.put("start", annotation.getBegin());

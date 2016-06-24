@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.commons.lang.StringUtils;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
@@ -97,6 +98,11 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     private static final String DEFINITION_IDX_NAME = "definition";
 
     /**
+     * The name for the full-text field in the index.
+     */
+    private static final String TEXT_IDX_NAME = "text";
+
+    /**
      * The name of the synonym field in the lucene index.
      */
     private static final String SYNONYM_IDX_NAME = "synonym";
@@ -109,7 +115,71 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     /**
      * The documents that will be indexed in the end.
      */
-    private Map<String, Map<String, List<String>>> documents;
+    private Map<String, Phenotype> documents;
+
+    /**
+     * A class representing a single phenotype found in the HPO.
+     */
+    private static class Phenotype
+    {
+        /* The class is private, so it's probably reasonable to have public fields. */
+        /**
+         * The id of the phenotype.
+         */
+        public final String id;
+
+        /**
+         * The list of synonyms given.
+         */
+        public List<String> synonyms;
+
+        /**
+         * The label for the phenotype.
+         */
+        public String label;
+
+        /**
+         * A collation of all definitions given.
+         */
+        public String definition;
+
+        /**
+         * The namespace that the phenotype belongs to.
+         */
+        public String namespace;
+
+        /**
+         * CTOR.
+         *
+         * @param id the id of the new phenotype.
+         */
+        public Phenotype(String id)
+        {
+            this.id = id;
+            synonyms = new ArrayList<>();
+            definition = "";
+            namespace = "";
+        }
+
+        /**
+         * Convert this HPO phenotype to a lucene document that can be indexed.
+         */
+        public List<IndexableField> toDocument()
+        {
+            List<IndexableField> doc = new ArrayList<>(synonyms.size() + 3);
+            doc.add(new StringField(ID_IDX_NAME, id, Store.YES));
+            doc.add(new TextField(LABEL_IDX_NAME, label, Store.YES));
+            String joinedSynonyms = StringUtils.join(synonyms, "\n");
+            String text = (definition.trim() + "\n" + joinedSynonyms + "\n" + label).trim();
+            doc.add(new TextField(TEXT_IDX_NAME, text, Store.YES));
+            for (int i = 0; i < synonyms.size(); i++) {
+                String synonym = synonyms.get(i);
+                String fieldName = (i == 0 ? SYNONYM_IDX_NAME : SYNONYM_IDX_NAME + i);
+                doc.add(new TextField(fieldName, synonym, Store.YES));
+            }
+            return doc;
+        }
+    }
 
     static
     {
@@ -142,50 +212,42 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
      */
     private String getIRIName(String iri)
     {
+        if (iri.matches("^<.*>$")) {
+            iri = iri.substring(1, iri.length() - 1);
+        }
         if(URL_VALIDATOR.isValid(iri)) {
             iri = iri.substring(iri.lastIndexOf('/') + 1);
         }
         return iri;
     }
 
-    private void addTo(Map<String, List<String>> propertyMap, String name, String value)
-    {
-        List<String> there = propertyMap.get(name);
-        if (there == null) {
-            there = new ArrayList<>();
-            propertyMap.put(name, there);
-        }
-        there.add(value);
-    }
-
     /**
      * Add the property with the IRI given to the dictionary for the id given.
+     *
+     * @param id the id of the phenotype we're adding to
+     * @param iri the iri of the property
+     * @param value the value of the property
      */
     private void addProperty(String id, String iri, String value)
     {
         id = getIRIName(id);
-        if (iri.matches("^<.*>$")) {
-            iri = iri.substring(1, iri.length() - 1);
-        }
         iri = getIRIName(iri);
-        Map<String, List<String>> propertyMap = documents.get(id);
-        if (propertyMap == null) {
-            propertyMap = new HashMap<>();
-            documents.put(id, propertyMap);
-            propertyMap.put(ID_IDX_NAME, new ArrayList<String>());
-            propertyMap.get(ID_IDX_NAME).add(id);
+        Phenotype phenotype = documents.get(id);
+        if (phenotype == null) {
+            phenotype = new Phenotype(id);
+            documents.put(id, phenotype);
         }
         if (DEFINITION_FIELDS.contains(iri)) {
-            addTo(propertyMap, DEFINITION_IDX_NAME, value);
+            phenotype.definition += "\n" + value;
         }
         if (SYNONYM_FIELDS.contains(iri)) {
-            addTo(propertyMap, SYNONYM_IDX_NAME, value);
+            phenotype.synonyms.add(value);
         }
         if (LABEL_FIELDS.contains(iri)) {
-            addTo(propertyMap, LABEL_IDX_NAME, value);
+            phenotype.label = value;
         }
         if (NAMESPACE_FIELD.equals(iri)) {
-            addTo(propertyMap, iri, value);
+            phenotype.namespace = value;
         }
     }
 
@@ -219,25 +281,10 @@ public class CTakesOWLVisitor extends OWLOntologyWalkerVisitor
     public Iterable<? extends Iterable<? extends IndexableField>> getDocuments()
     {
         List<List<IndexableField>> retval = new ArrayList<>(documents.size());
-        for (Map<String, List<String>> document : documents.values()) {
-            if (document.get(NAMESPACE_FIELD) == null ||
-                !NAMESPACE.equals(document.get(NAMESPACE_FIELD).get(0))) {
-                continue;
+        for (Phenotype phenotype : documents.values()) {
+            if (NAMESPACE.equals(phenotype.namespace)) {
+                retval.add(phenotype.toDocument());
             }
-            List<IndexableField> doc = new ArrayList<>(document.size());
-            String[] fields = { DEFINITION_IDX_NAME, LABEL_IDX_NAME, SYNONYM_IDX_NAME };
-            doc.add(new StringField(ID_IDX_NAME, document.get(ID_IDX_NAME).get(0), Store.YES));
-            for (String field : fields) {
-                List<String> values = document.get(field);
-                if (values != null) {
-                    for (int i = 0; i < values.size(); i++) {
-                        String value = values.get(i);
-                        String fieldName = (i == 0 ? field : field + i);
-                        doc.add(new TextField(fieldName, value, Store.YES));
-                    }
-                }
-            }
-            retval.add(doc);
         }
         return retval;
     }
