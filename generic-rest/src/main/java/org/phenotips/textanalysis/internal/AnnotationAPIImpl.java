@@ -55,7 +55,7 @@ public class AnnotationAPIImpl implements AnnotationAPI
     /**
      * The default URL of the annotation service.
      */
-    private static final String DEFAULT_BASE_URL = "http://localhost:8080/ctakes/";
+    private static final String DEFAULT_BASE_URL = "http://localhost:8080/scigraph/scigraph/";
 
     /**
      * The charset to use when sending requests.

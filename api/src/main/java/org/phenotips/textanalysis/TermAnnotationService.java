@@ -58,9 +58,10 @@ public interface TermAnnotationService
         }
 
         /**
-         * Constructs a new AnnotationException with the specified message and cause.
+         * Constructs a new AnnotationException with the specified detail message and cause.
+         *
          * @param message the detail message
-         * @param cause the exception that caused this one.
+         * @param cause the cause
          */
         public AnnotationException(String message, Exception cause)
         {
