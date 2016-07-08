@@ -118,458 +118,390 @@
       <cache>forbid</cache>
     </property>
     <property>
-      <code>
-document.observe('xwiki:dom:loaded', function() {
+    <code>
 
-// global variables
-
-/**
- * Suggestions that have been discarded or accepted.
- * Maps Term IDs to annotation objects
- */
-var dismissedTerms = {};
-
-/**
- * Unfiltered results of annotation by the annotationService.
- * Maps Term IDs to annotation objects
- */
-var annotationServiceResults = {};
-
-/**
- * List of suggestions that still haven't been displayed
- */
-var suggestionBank = [];
-
-/**
- * Suggestions that are currently displayed.
- * Maps Term IDs to annotation objects
- */
-var currentSuggestions = {};
-
-/**
- * True if the Dismissed XClass instance exists for this patient
- */
-var existsDismissedSuggestionDataStore = false;
-
-/**
- * The index of the first suggestion being displayed at the moment.
- */
-var currentFirstSuggestion = 0;
-
-/**
- * Number of suggestions to display in the UI
- */
-var numSuggestionsToDisplay = 4;
-
-/**
- * Text to be annotated
- */
-var text = "";
-
-/**
- * Container of the clinical notes annotation widget.
- */
-var widgetContainer = new Element('div', {"id" : 'annotation-widget-container'});
-
-/**
- * A refresh button.
- */
-var refreshButton = new Element('span', {"id" : 'annotation-refresh', "class" : 'fa fa-refresh xHelpButton', 'aria-hidden': 'true'});
-
-refreshButton.observe('click', function() {
-  dismissedTerms = {};
-  annotationServiceResults = {};
-  suggestionBank = [];
-  currentSuggestions = {};
-  persistDismissed();
-  updateAnnotations();
+require.config({
+  paths: {
+    "react": "$services.webjars.url('react', 'react.js')",
+    "react-dom": "$services.webjars.url('react', 'react-dom.js')",
+    "react-bootstrap": "$services.webjars.url('react-bootstrap', 'react-bootstrap.js')",
+    "Pikaday": "$services.webjars.url('org.webjars.npm:pikaday', 'pikaday.js')",
+    "lodash": "$services.webjars.url('org.webjars.bower:lodash', 'dist/lodash.min.js')",
+  },
 });
 
-//generate initial UI elements
-var panel = $$(".current-phenotype-selection")[0];
-var suggestionSourcesIds = ['indication_for_referral', 'medical_history'];
-var suggestionSources = $$('textarea[name$="' + suggestionSourcesIds.join('"], textarea[name$="') + '"]');
-var _getSourceTexts = function() {
- return suggestionSources.pluck('value').join('.\n');
-}
-if (panel &amp;&amp; suggestionSources.size() &gt; 0) {
-  var clinicalNotesSubPanel = 
-    new Element('div', {"class" : "sub-panel"}).insert(
-      new Element('h3', {"class" : "wikigeneratedheader"}).update(
-        "&lt;span&gt;&lt;strong&gt;Suggestions from Clinical Notes&lt;/strong&gt;&lt;/span&gt;"
-      ).insert(refreshButton)
-    ).insert(widgetContainer);
-  panel.insert({top : clinicalNotesSubPanel});
-
-  // Init
-  text = _getSourceTexts();
-  fetchDismissedSuggestions(updateAnnotations);
-  //listen for changes in indication for referral text box
-  suggestionSources.invoke('observe', 'blur', function() {
-    var newText = _getSourceTexts();
-    if (newText != text) {
-      text = newText;
-      updateAnnotations();
-    }
-  });
-}
-
 /**
- * Update the currentSuggestions dictionary, populating it with suggestions from the suggestion
- * bank, then redrawing the UI
+ * Sadly, the text boxes that we listen to exist outside of React's world, so this component encapsulates them.
  */
-function updateCurrentSuggestions() {
-  currentSuggestions = {};
-  var end = currentFirstSuggestion + numSuggestionsToDisplay;
-  suggestionBank.slice(currentFirstSuggestion, end).forEach(function(suggestion, idx) {
-    currentSuggestions[suggestion.id] = idx + currentFirstSuggestion;
-  });
-  drawSuggestionsUI();
-}
-
-/**
- * Queries server for annotations to the text, updates list of suggestions and
- * displays suggestions in the UI.
- */
-function updateAnnotations() {
-  /* This (resetting the currentFirstSuggestion) is gonna be a bit annoying if a user has advanced
-   * some pages and then revises the text box, but unfortunately it's really the only way to be
-   * sure we're not gonna paginate past the end. */
-  currentFirstSuggestion = 0;
-  if(text) {
-    currentSuggestions = {};
-    var queryString = '?outputSyntax=plain';
-    new Ajax.Request(new XWiki.Document('AnnotationService', 'PhenoTips').getURL('get') + queryString,
-    {
-      parameters : {
-        text : text
-      },
-      onCreate : function() {
-        var loadingContainer = new Element('div', {'class' : 'loading-container'});
-        var spinner = new Element('div', {
-          'id' : 'suggestions-spinner',
-          'class' : "fa fa-lg fa-spinner fa-spin"});
-        var loadingLabel = new Element('div', {'id' : 'generating-suggestions-label'}).update("Generating Suggestions");
-        loadingContainer.insert(spinner).insert(loadingLabel);
-        widgetContainer.update(loadingContainer);
-      },
-      onSuccess : function(response) {
-        annotationServiceResults = response.responseJSON.response;
-        getExistingPhenotypes();
-        populateSuggestionData();
-      },
-      onComplete : updateCurrentSuggestions
-    });
-  } else {
-    annotationServiceResults = {};
-    currentSuggestions = {};
-    populateSuggestionData();
-    drawSuggestionsUI();
-  }
-};
-
-/**
- * Creates YesNoPicker element.
- * 
- * @param {Object} suggestion Annotation object with the fields: 'start', 'end', 'id' and 'label'.
- * @param {Element} suggestionElt UI Element of one suggestion.
- * @param {Element} categoryElt Hidden UI Element containing term categories.
- */
-function generateYesNoPicker(suggestion, suggestionElt, categoryElt) {
-  var phenotypePrefix = ($('prefix') &amp;&amp; $('prefix').value || '');
-  var yesNoPicker = YesNoPicker.generatePickerElement(
-    [
-      {type: 'yes', name: phenotypePrefix + 'phenotype'},
-      {type: 'no', name: phenotypePrefix + 'negative_phenotype'}
-    ],
-    suggestion.id,
-    suggestion.label,
-    true
-  );
-
-  var qsWidget = $('quick-phenotype-search');
-
-  if(qsWidget &amp;&amp; qsWidget._suggestPicker) {
-    yesNoPicker.select('.yes', '.no').invoke('observe', 'click', function(event) {
-      var option = Event.findElement(event);
-      var input = option.down('input[type="checkbox"]') || option.previous('.yes-no-picker').down('.yes input[type="checkbox"]'); // defaults to 'Y' when clicking on the text
-      if (!input) {return;}
-      if (input.checked) {
-        var negative = option.hasClassName('no');
-        var categoryClone = categoryElt.clone(true);
-        if (negative) {
-          categoryClone.insert(new Element('input', {type: 'hidden', name : 'fieldName', value : input.name}));
-        }
-        qsWidget._suggestPicker.silent = true;
-        qsWidget._suggestPicker.acceptSuggestion({'id' : suggestion.id, 'value' : suggestion.label, 'category' : categoryClone, 'negative' : negative});
-        qsWidget._suggestPicker.silent = false;
-        new XWiki.widgets.Notification("$services.localization.render('phenotips.PatientSheetCode.added')".replace("__name__", suggestion.id), 'done');
-        dismissSuggestion(suggestion.id, suggestionElt);
-      } else {
-        var existingValue = $(qsWidget.id + '_' + input.value);
-        if (existingValue) {
-          existingValue.checked = false;
-          new XWiki.widgets.Notification("$services.localization.render('phenotips.PatientSheetCode.removed')".replace("__name__", suggestion.id), 'done');
-        }
-      }
-    });
-  }
-  return yesNoPicker;
-}
-
-/**
- * Creates one suggestion element, with a yes-no-picker, label, quote and info tooltip.
- *
- * @param {Object} suggestion Annotation object with the fields: 'start', 'end', 'id' and 'label'.
- */
-function generateSuggestionUIElement(suggestionIdx) {
-  var suggestion = suggestionBank[suggestionIdx];
-  var start = suggestion.startInSentence;
-  var end = suggestion.endInSentence;
-  var quoteStart = 0;
-  var quoteEnd = text.length;
-  var suggestionBox = new Element('div', {'class' : 'suggestion'});
-  var termCategories = new Element("span", {"class" : "hidden term-category"});
-  var sentence = suggestion.sentence;
-  suggestion['term_category'].forEach(function(category) {
-    termCategories.insert(
-      new Element('input', {'type' : 'hidden', 'value' : category})
-    );
-  });
-  var yesNoPicker = generateYesNoPicker(suggestion, suggestionBox, termCategories);
-  var dismissButton = new Element('div', {'class' : 'hide-suggestion'}).update("✖");
-  dismissButton.observe('click', function() {
-    dismissSuggestion(suggestion.id, suggestionBox);
-  });
-  
-  return suggestionBox.insert(
-    new Element('div', {'class' : 'suggestion-headline'}).insert(
-        yesNoPicker
-      ).insert(
-        new Element("span", {"class" : "suggestion-term"}).update(suggestion.label)
-      ).insert(
-        termCategories
-      ).insert('&lt;span class="xHelpButton fa fa-info-circle phenotype-info" title="' + suggestion.id + '"&gt;&lt;/span&gt;')
-  ).insert(
-    new Element('div', {'class' : 'suggestion-quote'}).insert(
-      "..." + sentence.substring(quoteStart, start)
-    ).insert(
-      new Element('span', {'class' : 'quoted-term'}).update(sentence.substring(start, end))
-    ).insert(
-      sentence.substring(end, quoteEnd) + "..."
-    )
-  ).insert(
-    dismissButton
-  );
-}
-
-/**
- * Queries server and updates list of previously dismissed or considered suggestions.
- *
- * @param {function} callback Will be invoked when the request is complete.
- */
-function fetchDismissedSuggestions(callback) {
-  new Ajax.Request(XWiki.currentDocument.getRestURL('objects/PhenoTips.DismissedSuggestionsClass/0/properties/terms'), {
-    'method': 'get',
-    'requestHeaders': {'Accept': 'application/json'},
-    onSuccess: function(response) {
-      dismissedTermsKeys = response.responseJSON.value.split('|');
-      dismissedTermsKeys.forEach(function(termId) {
-        dismissedTerms[termId] = true;
-      });
-      existsDismissedSuggestionDataStore = true;
+define("SuggestionSourceListener", [], function() {
+  return {
+    getSourceTexts: function() {
+       return this.suggestionSources.pluck('value').join('.\n');
     },
-    onComplete: function(response) {
-      callback();
-    }
-  });
-};
-
-/**
- * Send the list of dismissed suggestions to the server so they're remembered.
- */
-function persistDismissed() {
-  var delimitedDismissedTerms = Object.keys(dismissedTerms).join('|');
-  var parameters = {
-    'ajax': true,
-    'form_token': $$("meta[name='form_token']")[0].content
+    init: function(cb) {
+      var suggestionSourcesIds = ['indication_for_referral', 'medical_history'];
+      var that = this;
+      this.suggestionSources = $$('textarea[name$="' + suggestionSourcesIds.join('"], textarea[name$="') + '"]');
+      this.suggestionSources.invoke('observe', 'blur', function() {
+        var newText = that.getSourceTexts();
+        if (newText != this.text) {
+          this.text = newText;
+          if(this.text) {
+            cb(this.text);
+          }
+        }
+      });
+    },
   };
-  if (existsDismissedSuggestionDataStore) {
-    parameters['PhenoTips.DismissedSuggestionsClass_0_terms'] = delimitedDismissedTerms;
-  } else {
-    parameters['classname'] = 'PhenoTips.DismissedSuggestionsClass';
-    parameters['PhenoTips.DismissedSuggestionsClass_terms'] = delimitedDismissedTerms;
-  }
-  new Ajax.Request(XWiki.currentDocument.getURL((existsDismissedSuggestionDataStore ? 'save' : 'objectadd')), {
-    'parameters': parameters,
-    onSuccess : function() {
-      existsDismissedSuggestionDataStore = true;
-    }
-  });
-}
-
-/**
- * Add term with termId to list of dismissed suggestions and update the dismissed
- * suggestions on the server.
- *
- * @param {string} termId Ontology ID of the phenotype term.
- * @param {Element} suggestionElt UI Element of one suggestion.
- */
-function dismissSuggestion(termId, suggestionElt) {
-  dismissedTerms[termId] = true;
-  persistDismissed();
-  //var nextSuggestion = popNextSuggestion();
-  var deletedIdx = currentSuggestions[termId];
-  delete currentSuggestions[termId];
-  suggestionBank.splice(deletedIdx, 1);
-  Object.keys(currentSuggestions).forEach(function(key) {
-    if (currentSuggestions[key] > deletedIdx) {
-      currentSuggestions[key] -= 1;
-    }
-  });
-  var nextIdx = currentFirstSuggestion + numSuggestionsToDisplay - 1;
-
-  if(nextIdx &lt; suggestionBank.length) {
-    var nextSuggestion = suggestionBank[nextIdx];
-    currentSuggestions[nextSuggestion.id] = nextIdx;
-    suggestionElt.replace(generateSuggestionUIElement(nextIdx));
-    Event.fire(document, 'xwiki:dom:updated', {'elements' : [suggestionElt]});
-  } else {
-    suggestionElt.remove();
-  }
-  updateSuggestionCount();
-};
-
-/**
- * Returns a list of phenotypes already added for this patient.
- */
-function getExistingPhenotypes() {
-  listedTerms = {};
-  $$(".yes-no-picker").each(function(element) {
-    var yesInput = element.down('.yes input');
-    var noInput = element.down('.no input');
-    if (yesInput.name === noInput.name) {
-      // Not a phenotype
-      return;
-    }
-    var key = yesInput.value;
-    var existing = listedTerms[key];
-    var enable = element.down('.na input') &amp;&amp; !element.down('.na input').checked;
-    if (!enable) {
-      // not listed phenotype
-      return;
-    }
-    if (!existing) {
-      listedTerms[key] = true;
-    }
-  });
-  return listedTerms;
-};
-
-/**
- * Generates suggestion list from annotations, but filtering out
- * dismissed and existing phenotypes.
- */
-function populateSuggestionData() {
-  suggestionBank = [];
-  var listedTerms = getExistingPhenotypes();
-  Object.keys(annotationServiceResults).forEach(function(termId) {
-    if (!listedTerms[termId] &amp;&amp; !dismissedTerms[termId]) {
-      suggestionBank.push(annotationServiceResults[termId]);
-    }
-  });
-};
-
-/**
- * Removes the next numSuggestions of suggestions from suggestionBank and returns them.
- * @param {Number} numSuggestions The number of suggestions to remove.
- */
-function popSuggestions(numSuggestions) {
-  var suggestionsToDisplay = [];
-  var limit = Math.min(numSuggestions, suggestionBank.length);
-  for (var i = 0; i &lt; limit; i++) {
-    suggestionsToDisplay.push(suggestionBank.shift());
-  }
-  return suggestionsToDisplay;
-};
-
-/**
- * Removes the next suggestion from suggestionBank and returns it.
- */
-function popNextSuggestion() {
-  var suggestionList = popSuggestions(1);
-  if (suggestionList.length != 1) {
-    return null;
-  }
-  return suggestionList[0];
-}
-
-/**
- * Clears the UI and draws all the elements.
- */
-function drawSuggestionsUI() {
-  var suggestionsContainer = new Element('div', {'id' : 'suggestions-container'});
-  widgetContainer.update(suggestionsContainer);
-
-
-
-  //scrap what exists, create UI from 4 first elements in suggestions
-  var suggestionBoxes = [];
-  Object.keys(currentSuggestions).forEach(function(termId) {
-    suggestionBoxes.push(generateSuggestionUIElement(currentSuggestions[termId]));
-  });
-
-  //draw suggestion boxes
-  var suggestionList = new Element('ul', {"class" : "suggestions-list"});
-  suggestionBoxes.forEach(function(suggestion) {
-    suggestionList.insert(
-      new Element('li', {"class" : "suggestion-list-item"}).insert(suggestion)
-    )
-  });
-  suggestionsContainer.update(suggestionList);
-  Event.fire(document, 'xwiki:dom:updated', {'elements' : [suggestionsContainer]});
-
-  //show progress counter
-  widgetContainer.insert(new Element("div", {"id" : "suggestion-count"}));
-
-  if (currentFirstSuggestion &gt; 0) {
-    suggestionsContainer.insert({'top': new Element('span', {'class': 'fa fa-chevron-left navigation'}).observe('click', function() {
-      var prevPage = currentFirstSuggestion - numSuggestionsToDisplay;
-      currentFirstSuggestion = Math.max(prevPage, 0);
-      updateCurrentSuggestions();
-    }).insert(new Element('input', {"value": "1", "type": "hidden"}))});
-  }
-
-
-  if ((currentFirstSuggestion + numSuggestionsToDisplay) &lt; suggestionBank.length) {
-    suggestionsContainer.insert(new Element('span', {'class': 'fa fa-chevron-right navigation'}).observe('click', function() {
-      var nextPage = currentFirstSuggestion + numSuggestionsToDisplay;
-      currentFirstSuggestion = Math.min(nextPage, suggestionBank.length - numSuggestionsToDisplay);
-      currentFirstSuggestion = Math.max(currentFirstSuggestion, 0);
-      updateCurrentSuggestions();
-    }).insert(new Element('input', {"value": "2", "type": "hidden"})));
-  }
-
-  updateSuggestionCount();
-};
-
-/**
- * Updates the UI element that shows the progress of going through suggestions.
- */
-function updateSuggestionCount() {
-  var numCurrentSuggestions = Object.keys(currentSuggestions).length;
-  var numTotalSuggestions = suggestionBank.length;
-  var end = currentFirstSuggestion + numCurrentSuggestions;
-  /* Arrays are 0 indexed, but users are not. */
-  var start = currentFirstSuggestion + 1;
-  if(numTotalSuggestions &gt; 0) {
-    $("suggestion-count").update(start + " to " + end + " of " + numTotalSuggestions + " suggestions");
-  } else {
-    $("suggestion-count").update("No suggestions to display");
-  }
-}
 });
-      </code>
+
+/**
+ * This object interacts with the PhenoTips backend to make sure suggestions we dismiss go
+ * away for good.
+ */
+define("SuggestionsDismisser", ["lodash"], function(_) {
+  return {
+    _dismissed: {},
+    _existsDataStore: false,
+    /**
+     * Given a dictionary of suggestions, return a version without those that have been dismissed in the past.
+     */
+    filter: function(suggestions) {
+      return _.omit(suggestions, _.keys(this._dismissed));
+    },
+    dismiss: function(phenotype, onDone) {
+      this._dismissed[phenotype.id] = true;
+      this._persist(onDone);
+    },
+    clear: function(onDone) {
+      this._dismissed = {};
+      this._persist(onDone);
+    },
+    _persist: function(onDone) {
+      var delimited = _.keys(this._dismissed).join('|');
+      var parameters = {
+        'ajax': true,
+        'form_token': $$("meta[name='form_token']")[0].content,
+      };
+      if(this._existsDataStore) {
+        parameters['PhenoTips.DismissedSuggestionsClass_0_terms'] = delimited;
+      } else {
+        parameters.classname = 'PhenoTips.DismissedSuggestionsClass';
+        parameters['PhenoTips.DismissedSuggestionsClass_terms'] = delimited;
+      }
+      var url = XWiki.currentDocument.getURL((this._existsDataStore ? 'save' : 'objectadd'));
+      var that = this;
+      new Ajax.Request(url, {
+        parameters: parameters,
+        onSuccess: function() {
+          that._existsDataStore = true;
+        },
+        onComplete: onDone
+      });
+    },
+    init: function(onDone) {
+      var url = XWiki.currentDocument.getRestURL('objects/PhenoTips.DismissedSuggestionsClass/0/properties/terms');
+      var that = this;
+      new Ajax.Request(url, {
+        method: 'get',
+        requestHeaders: {'Accept': 'application/json'},
+        onSuccess: function(response) {
+          var keys = response.responseJSON.value.split('|');
+          keys.forEach(function(e) { that._dismissed[e] = true; });
+          that._existsDataStore = true;
+        },
+        onComplete: onDone,
+      });
+    },
+  };
+});
+
+/**
+ * This is a port to react of PhenoTips' existing YesNoPicker element.
+ * It's much reduced in functionality, and only displays the buttons and provides callbacks on them.
+ */
+define("ReactYNPicker", ['react', 'lodash'], function(React, _) {
+  return React.createClass({
+    displayName: 'yn-picker',
+    propTypes: {
+      onButton: React.PropTypes.object.isRequired,
+    },
+    _supported: {
+      yes : {label: 'Y', title : "$services.localization.render('phenotips.yesNoNAPicker.yes.title')"},
+      no  : {label: 'N', title : "$services.localization.render('phenotips.yesNoNAPicker.no.title')"},
+      na  : {label: 'NA', title : "$services.localization.render('phenotips.yesNoNAPicker.NA.title')"}
+    },
+    render: function() {
+      var that = this;
+      var inner = _.filter(_.keys(this._supported).map(function(key) {
+        var value = that._supported[key];
+        if (!that.props.onButton[key]) {
+          return null;
+        }
+        return React.createElement('label', {
+          className: key,
+          title: value.title,
+          onClick: that.props.onButton[key],
+          key: key,
+        }, value.label);
+      }), _.identity);
+      return React.createElement('span', {className: 'yes-no-picker'}, inner);
+    }
+  });
+});
+
+define("SuggestionsLoading", ['react'], function(React) {
+  return React.createClass({
+    displayName: 'suggestions-loading',
+    render: function() {
+      return React.createElement('div',
+        {id: 'annotation-widget-container'},
+        React.createElement('div',
+          {className: 'loading-container'},
+          React.createElement('div', {id: 'suggestions-spinner', className: 'fa fa-lg fa-spinner fa-spin'}),
+          React.createElement('div', {id: 'generating-suggestions-label'}, 'Generating Suggestions')
+        )
+      );
+    },
+  });
+});
+
+define("SuggestionElement", ['react', "ReactYNPicker", "lodash"], function(React, ReactYNPicker, _) {
+  return React.createClass({
+    displayName: 'suggestion-element',
+    propTypes: {
+      phenotype: React.PropTypes.object.isRequired,
+      onSelect: React.PropTypes.func.isRequired,
+      onDismiss: React.PropTypes.func.isRequired,
+    },
+    onYes: function() {
+      var phenotype = _.clone(this.props.phenotype);
+      phenotype.isObserved = true;
+      this.props.onSelect(phenotype);
+    },
+    onNo: function() {
+      var phenotype = _.clone(this.props.phenotype);
+      phenotype.isObserved = false;
+      this.props.onSelect(phenotype);
+    },
+    onDismiss: function() {
+      var phenotype = _.clone(this.props.phenotype);
+      this.props.onDismiss(phenotype);
+    },
+    render: function() {
+      var sentence = this.props.phenotype.sentence;
+      var end = this.props.phenotype.endInSentence;
+      var start = this.props.phenotype.startInSentence;
+      return React.createElement('li',
+          {className: 'suggestion-list-item'},
+          React.createElement('div', {className: 'suggestion'},
+            React.createElement('div',
+              {className: 'suggestion-headline'},
+              React.createElement(ReactYNPicker, {onButton: {yes: this.onYes, no: this.onNo}}),
+              React.createElement('span', {className: 'suggestion-term'}, this.props.phenotype.label),
+              React.createElement('span', {className: 'xHelpButton fa fa-info-circle phenotype-info',
+                                           title: this.props.phenotype.id})
+              ),
+            React.createElement('div',
+              {className: 'suggestion-quote'},
+              '...' + sentence.substring(0, start),
+              React.createElement('span', {className: 'quoted-term'}, sentence.substring(start, end)),
+              sentence.substring(end, sentence.length) + '...'
+              ),
+            React.createElement('div', {className: 'hide-suggestion', onClick: this.onDismiss}, "✖")
+            )
+          );
+    },
+  });
+});
+
+define("SuggestionList", ['react', "SuggestionElement", "lodash"], function(React, SuggestionElement, _) {
+  return React.createClass({
+    displayName: 'suggestion-list',
+    propTypes: {
+      phenotypes: React.PropTypes.object.isRequired,
+      onSelect: React.PropTypes.func.isRequired,
+      onDismiss: React.PropTypes.func.isRequired,
+      pageSize: React.PropTypes.number,
+    },
+    getDefaultProps: function() {
+      return {
+        pageSize: 4,
+      };
+    },
+    getInitialState: function() {
+      return {
+        page: 0,
+      };
+    },
+    componentWillReceiveProps: function(nextProps) {
+      /* We can't be paging past the end, so roll it back if necessary. */
+      if(this.state.page >= this._maxPages(nextProps.phenotypes, nextProps.pageSize)) {
+        this.setState({ page: this._maxPages(nextProps.phenotypes, nextProps.pageSize) - 1 });
+      }
+    },
+    nextPage: function() {
+      this.setState({ page: Math.min(this.state.page + 1, this._maxPages())});
+    },
+    prevPage: function() {
+      this.setState({ page: Math.max(this.state.page - 1, 0)});
+    },
+    _maxPages: function(phenotypes, pageSize) {
+      phenotypes = phenotypes || this.props.phenotypes;
+      pageSize = pageSize || this.props.pageSize;
+      return Math.ceil(_.keys(phenotypes).length / pageSize);
+    },
+    render: function() {
+      var prev = null;
+      var next = null;
+      if (this.state.page !== 0) {
+        prev = React.createElement('span', {className: 'fa fa-chevron-left navigation', onClick: this.prevPage, key: 'prev'});
+      }
+      if ((this.state.page + 1) &lt; this._maxPages()) {
+        next = React.createElement('span', {className: 'fa fa-chevron-right navigation', onClick: this.nextPage, key: 'next'});
+      }
+      var that = this;
+      var len = _.keys(this.props.phenotypes).length;
+      var start = this.state.page * this.props.pageSize;
+      var end = Math.min(start + this.props.pageSize, len);
+      var list = _.keys(this.props.phenotypes).slice(start, end).map(function(key) {
+        var phenotype = that.props.phenotypes[key];
+        return React.createElement(SuggestionElement, {
+          phenotype: phenotype,
+          onSelect: that.props.onSelect,
+          onDismiss: that.props.onDismiss,
+          key: phenotype.id,
+        });
+      });
+      var count = 'No suggestions to display';
+      if (len) {
+        count = (start + 1) + " to " + end + " of " + len + " suggestions.";
+      }
+      var ul = React.createElement('ul', {className: 'suggestions-list', key: 'suggestions-list'}, list);
+      var inner = _.filter([prev, ul, next], _.identity);
+      return React.createElement('div', {id: 'annotation-widget-container'},
+          React.createElement('div', {id: 'suggestions-container'}, inner),
+          React.createElement('div', {id: 'suggestion-count'}, count)
+          );
+    },
+  });
+});
+
+define("RefreshButton", ["react"], function(React) {
+  return React.createClass({
+    displayName: 'refresh-button',
+    propTypes: {
+      onRefresh: React.PropTypes.func.isRequired,
+    },
+    render: function() {
+      return React.createElement('span',
+        {id: 'annotation-refresh', className: 'fa fa-refresh xHelpButton', 'aria-hidden': 'true',
+         onClick: this.props.onRefresh});
+    },
+  });
+});
+
+define("ClinicalNotesAnnotation", ["react", "PhenotypeSelectionUtils", "SuggestionSourceListener", "SuggestionsLoading", "SuggestionList",
+                                   "RefreshButton", "SuggestionsDismisser", 'lodash'],
+                           function(React, PhenotypeSelectionUtils, SuggestionSourceListener,   SuggestionsLoading,   SuggestionList,
+                                    RefreshButton,  SuggestionsDismisser, _) {
+  return React.createClass({
+    displayName: 'clinical-notes-annotation-panel',
+    onSourceBoxUpdate: function(text) {
+      /* React is ajax agnostic, so let's just stick to prototype here */
+      var queryString = '?outputSyntax=plain';
+      var url = new XWiki.Document('AnnotationService', 'PhenoTips').getURL('get') + queryString;
+      var that = this;
+      this.setState({ loading: true }, function() {
+        new Ajax.Request(url, {
+          parameters: {
+            text: text,
+          },
+          onSuccess: this.setResults,
+        });
+      });
+    },
+    /*isLoading: function() {
+      this.setState({ loading: true });
+    },*/
+    setResults: function(results) {
+      var suggestions = SuggestionsDismisser.filter(results.responseJSON.response);
+      var existing = PhenotypeSelectionUtils.getSelectedPhenotypes().map(function (o) { return o.id; });
+      suggestions = _.omit(suggestions, existing);
+      this.setState({
+        loading: false,
+        suggestions: suggestions,
+      });
+    },
+    getInitialState: function() {
+      return {
+        suggestions: {},
+        loading: false,
+      };
+    },
+    componentDidMount: function() {
+      var that = this;
+      SuggestionSourceListener.init(this.onSourceBoxUpdate);
+      SuggestionsDismisser.init(this._forceRefresh);
+    },
+    onRefresh: function() {
+      var that = this;
+      SuggestionsDismisser.clear(this._forceRefresh);
+    },
+    onSelectPhenotype: function(phenotype) {
+      PhenotypeSelectionUtils.selectPhenotype(phenotype, '');
+      this.onDismissPhenotype(phenotype);
+    },
+    onDismissPhenotype: function(phenotype) {
+      var that = this;
+      SuggestionsDismisser.dismiss(phenotype, function() {
+        var suggestions = that.state.suggestions;
+        suggestions = SuggestionsDismisser.filter(suggestions);
+        that.setState({suggestions: suggestions});
+      });
+    },
+    _forceRefresh: function() {
+      this.onSourceBoxUpdate(SuggestionSourceListener.getSourceTexts());
+    },
+    render: function() {
+      var inner = null;
+      if(this.state.loading) {
+        inner = React.createElement(SuggestionsLoading);
+      } else {
+        inner = React.createElement(SuggestionList, {
+          onSelect: this.onSelectPhenotype,
+          onDismiss: this.onDismissPhenotype,
+          phenotypes: this.state.suggestions,
+        });
+      }
+      return React.createElement('div',
+        {className: 'sub-panel'},
+        React.createElement('h3',
+          {className: 'wikigeneratedheader'},
+          React.createElement('span', null, React.createElement('strong', null, 'Suggestions from Clinical Notes')),
+          React.createElement(RefreshButton, {onRefresh: this.onRefresh})),
+        inner);
+    },
+  });
+});
+
+require(['react', 'react-dom', 'ClinicalNotesAnnotation'], function(React, ReactDOM, ClinicalNotesAnnotation) {
+//var config = $xwiki.getDocument("PhenoTips.NeurologyTableCode").getContent();
+
+//var initialState = JSON.parse(document.getElementById('neurology-table-container').getAttribute('data-init'));
+  var config = {};
+  var initialState = {};
+
+  var init = function() {
+    var contain = new Element('div', {id: 'clinical-notes-container'});
+    $$('.current-phenotype-selection')[0].insert({top: contain})
+    ReactDOM.render(React.createElement(ClinicalNotesAnnotation, { config: config, initialState: initialState }),
+                                        contain);
+  };
+
+  (XWiki.domIsLoaded &amp;&amp; init()) || document.observe("xwiki:dom:loaded", init);
+});
+    </code>
     </property>
     <property>
       <name/>
@@ -579,6 +511,217 @@ function updateSuggestionCount() {
     </property>
     <property>
       <use>onDemand</use>
+    </property>
+  </object>
+  <object>
+    <name>PhenoTips.Clinical Notes Annotation</name>
+    <number>10</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>28d6e323-d40f-4a43-a287-5b04240dff39</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <disabled>0</disabled>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>define("PhenotypeSelectionUtils", [], function() {
+  return {
+    /*
+      phenotype data structure:
+      id &lt;- an HPO id or arbitrary text
+      isObserved &lt;- boolean describing whether or not the phenotype was observed
+      qualifiers: {
+        spatial_pattern &lt;- HPO ID
+        severity &lt;- HPO ID
+      }
+    */
+
+    /**
+     * Selects a phenotype. If the phenotype is already selected, do nothing.
+     * @param  {object} phenotype         the phenotype. see object spec above.
+     * @param  {string} autoSelectSrcDesc a string describing the reason for auto-selection of this phenotype, if applicable.
+     */
+    selectPhenotype: function(phenotype, autoSelectSrcDesc) {
+      var _this = this;
+      var addAutomaticSelectionIndicator = function(phenotypeEl) {
+        var addedItem = $('current-phenotype-selection').down('label input[value="' + phenotypeEl.value + '"]');
+        if (addedItem &amp;&amp; autoSelectSrcDesc) {
+          addedItem.up('label').insert({before : new Element('span', {
+                                                               'class' : 'fa fa-bolt',
+                                                               'title' : 'This phenotype was automatically added based on ' + autoSelectSrcDesc
+          }).update(' ')});
+        }
+      };
+
+      var existingEl = this._findFormElementForPhenotype(phenotype.id, !phenotype.isObserved);
+      if (existingEl) {
+        if (existingEl._ynpicker) {
+          existingEl._ynpicker._select(phenotype.isObserved ? 'yes' : 'no');
+        } else {
+          existingEl.checked = true;
+        }
+        addAutomaticSelectionIndicator(existingEl);
+      } else {
+        var suggestWidget = $("quick-phenotype-search")._suggestWidget;
+        if (!suggestWidget) {
+           return null;
+        }
+        var id = phenotype.id;
+        var searchUrl = new XWiki.Document('SolrService', 'PhenoTips').getURL("get", "q=" + id);
+        new Ajax.Request(searchUrl, {
+          method: 'get',
+          onSuccess: function(transport) {
+            var response = transport.responseJSON.rows[0];
+            if (response) {
+              var categories = "";
+              if (!phenotype.isObserved) {
+                categories += '&lt;input type="hidden" name="fieldName" value="PhenoTips.PatientClass_0_negative_phenotype" class="no"&gt;';
+              }
+              categories += '&lt;span class="hidden term-category"&gt;';
+              response.term_category.each(function(category){categories += '&lt;input type="hidden" value="' + category + '"&gt;';});
+              categories += "&lt;/span&gt;";
+              var data = {
+                id: id,
+                value: response.name,
+                category: categories,
+                negative: !phenotype.isObserved
+              };
+              var title = response.name;
+              suggestWidget.acceptEntry(data, title, title, true);
+
+              existingEl = _this._findFormElementForPhenotype(phenotype.id, !phenotype.isObserved);
+              addAutomaticSelectionIndicator(existingEl);
+            }
+          }
+        });
+      }
+    },
+
+    /**
+     * Deselects a phenotype. If the phenotype is not selected, do nothing.
+     * @param  {object} phenotype the phenotype. see object spec above.
+     */
+    deselectPhenotype: function(phenotype) {
+      var phenotypeEl = this._findFormElementForPhenotype(phenotype.id, !phenotype.isObserved);
+      if (phenotypeEl) {
+        if (phenotypeEl) {
+          phenotypeEl._ynpicker._onUnselect();
+        } else {
+          phenotypeEl.checked = false;
+        }
+      }
+    },
+
+    getSelectedPhenotypes: function() {
+      return $$('div.phenotype .yes-no-picker').map(function(e) {
+        var yes = e.down('.yes input');
+        var no = e.down('.no input');
+        if (yes.name === no.name) {
+          return null;
+        }
+        var id = yes.value;
+        var set = yes.checked || no.checked;
+        if(set) {
+          return {id: id, isObserved: yes.checked};
+        } else {
+          return null;
+        }
+      }).filter(function(e) { return e; });
+    },
+
+    /**
+     * Updates a selected phenotype. If the phenotype is not selected, do nothing.
+     */
+    /*updateSelectedPhenotype: function(phenotype) {
+    },*/
+
+    _findFormElementForPhenotype: function(id, negative, subtype) {
+      var result = null;
+      if ($('prefix')) {
+        result = $($('prefix').value + (negative ? 'negative_' : '') + (subtype ? subtype + '_' : '') + 'phenotype_' + id);
+      }
+      return result;
+    },
+  };
+});</code>
+    </property>
+    <property>
+      <name>PhenotypeSelectionUtils</name>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use>currentPage</use>
     </property>
   </object>
   <object>
