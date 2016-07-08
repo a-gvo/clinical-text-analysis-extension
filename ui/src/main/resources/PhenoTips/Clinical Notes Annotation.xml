@@ -411,7 +411,6 @@ define("ClinicalNotesAnnotation", ["react", "PhenotypeSelectionUtils", "Suggesti
       /* React is ajax agnostic, so let's just stick to prototype here */
       var queryString = '?outputSyntax=plain';
       var url = new XWiki.Document('AnnotationService', 'PhenoTips').getURL('get') + queryString;
-      var that = this;
       this.setState({ loading: true }, function() {
         new Ajax.Request(url, {
           parameters: {
@@ -421,9 +420,6 @@ define("ClinicalNotesAnnotation", ["react", "PhenotypeSelectionUtils", "Suggesti
         });
       });
     },
-    /*isLoading: function() {
-      this.setState({ loading: true });
-    },*/
     setResults: function(results) {
       var suggestions = SuggestionsDismisser.filter(results.responseJSON.response);
       var existing = PhenotypeSelectionUtils.getSelectedPhenotypes().map(function (o) { return o.id; });
@@ -440,12 +436,10 @@ define("ClinicalNotesAnnotation", ["react", "PhenotypeSelectionUtils", "Suggesti
       };
     },
     componentDidMount: function() {
-      var that = this;
       SuggestionSourceListener.init(this.onSourceBoxUpdate);
       SuggestionsDismisser.init(this._forceRefresh);
     },
     onRefresh: function() {
-      var that = this;
       SuggestionsDismisser.clear(this._forceRefresh);
     },
     onSelectPhenotype: function(phenotype) {
@@ -486,17 +480,10 @@ define("ClinicalNotesAnnotation", ["react", "PhenotypeSelectionUtils", "Suggesti
 });
 
 require(['react', 'react-dom', 'ClinicalNotesAnnotation'], function(React, ReactDOM, ClinicalNotesAnnotation) {
-//var config = $xwiki.getDocument("PhenoTips.NeurologyTableCode").getContent();
-
-//var initialState = JSON.parse(document.getElementById('neurology-table-container').getAttribute('data-init'));
-  var config = {};
-  var initialState = {};
-
   var init = function() {
     var contain = new Element('div', {id: 'clinical-notes-container'});
     $$('.current-phenotype-selection')[0].insert({top: contain})
-    ReactDOM.render(React.createElement(ClinicalNotesAnnotation, { config: config, initialState: initialState }),
-                                        contain);
+    ReactDOM.render(React.createElement(ClinicalNotesAnnotation, null), contain);
   };
 
   (XWiki.domIsLoaded &amp;&amp; init()) || document.observe("xwiki:dom:loaded", init);
