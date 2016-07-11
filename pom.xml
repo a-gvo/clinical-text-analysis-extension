@@ -44,6 +44,7 @@
     <module>scigraph-service</module>
     <module>ctakes-service</module>
     <module>generic-rest</module>
+    <module>resources</module>
   </modules>
 
   <profiles>
