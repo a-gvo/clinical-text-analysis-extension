@@ -66,7 +66,7 @@ public class PTVocabularyImpl extends VocabularyNeo4jImpl
     /**
      * The initial threshold for result scores.
      */
-    public static final float BASE_THRESHOLD = 0.20f;
+    public static final float BASE_THRESHOLD = 0.30f;
 
     /**
      * The length of the prefix that must match when searching.
