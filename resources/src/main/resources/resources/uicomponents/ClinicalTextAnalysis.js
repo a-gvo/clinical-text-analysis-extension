@@ -194,17 +194,24 @@ define("SuggestionList", ['react', "SuggestionElement", "lodash"], function(Reac
         page: 0,
       };
     },
+    _setPage: function(page, maxPages) {
+      maxPages = maxPages || this._maxPages();
+      page = Math.min(page, maxPages - 1);
+      page = Math.max(page, 0);
+      this.setState({ page: page });
+    },
     componentWillReceiveProps: function(nextProps) {
       /* We can't be paging past the end, so roll it back if necessary. */
-      if(this.state.page >= this._maxPages(nextProps.phenotypes, nextProps.pageSize)) {
-        this.setState({ page: this._maxPages(nextProps.phenotypes, nextProps.pageSize) - 1 });
+      var maxPages = this._maxPages(nextProps.phenotypes, nextProps.pageSize);
+      if(this.state.page >= maxPages) {
+        this._setPage(maxPages - 1, maxPages);
       }
     },
     nextPage: function() {
-      this.setState({ page: Math.min(this.state.page + 1, this._maxPages())});
+      this._setPage(this.state.page + 1);
     },
     prevPage: function() {
-      this.setState({ page: Math.max(this.state.page - 1, 0)});
+      this._setPage(this.state.page - 1);
     },
     _maxPages: function(phenotypes, pageSize) {
       phenotypes = phenotypes || this.props.phenotypes;
