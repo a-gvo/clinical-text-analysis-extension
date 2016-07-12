@@ -150,9 +150,9 @@ define("ReactYNPicker", ['react', 'lodash'], function(React, _) {
       no  : {label: 'N', title : "$services.localization.render('phenotips.yesNoNAPicker.no.title')"},
       na  : {label: 'NA', title : "$services.localization.render('phenotips.yesNoNAPicker.NA.title')"}
     },
-	_onClick: function(key, ev) {
-	  return this.props.onButton[key](ev);
-	},
+    _onClick: function(key, ev) {
+      return this.props.onButton[key](ev);
+    },
     render: function() {
       var that = this;
       var inner = _.filter(_.keys(this._supported).map(function(key) {
