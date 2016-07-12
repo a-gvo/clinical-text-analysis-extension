@@ -12,10 +12,10 @@ define("SuggestionSourceListener", [], function() {
       this.suggestionSources = $$('textarea[name$="' + suggestionSourcesIds.join('"], textarea[name$="') + '"]');
       this.suggestionSources.invoke('observe', 'blur', function() {
         var newText = that.getSourceTexts();
-        if (newText != this.text) {
-          this.text = newText;
-          if(this.text) {
-            cb(this.text);
+        if (newText != that.text) {
+          that.text = newText;
+          if(that.text) {
+            cb(that.text);
           }
         }
       });
