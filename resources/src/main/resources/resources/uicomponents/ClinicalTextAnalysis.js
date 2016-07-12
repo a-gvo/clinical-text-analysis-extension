@@ -85,44 +85,6 @@ define("SuggestionsDismisser", ["lodash"], function(_) {
 });
 
 /**
- * This is a port to react of PhenoTips' existing YesNoPicker element.
- * It's much reduced in functionality, and only displays the buttons and provides callbacks on them,
- * without containing the inner checkboxes that the phenotips widget has.
- */
-define("ReactYNPicker", ['react', 'lodash'], function(React, _) {
-  return React.createClass({
-    displayName: 'yn-picker',
-    propTypes: {
-      onButton: React.PropTypes.object.isRequired,
-    },
-    _supported: {
-      yes : {label: 'Y', title : "$services.localization.render('phenotips.yesNoNAPicker.yes.title')"},
-      no  : {label: 'N', title : "$services.localization.render('phenotips.yesNoNAPicker.no.title')"},
-      na  : {label: 'NA', title : "$services.localization.render('phenotips.yesNoNAPicker.NA.title')"}
-    },
-	_onClick: function(key, ev) {
-	  return this.props.onButton[key](ev);
-	},
-    render: function() {
-      var that = this;
-      var inner = _.filter(_.keys(this._supported).map(function(key) {
-        var value = that._supported[key];
-        if (!that.props.onButton[key]) {
-          return null;
-        }
-        return React.createElement('label', {
-          className: key,
-          title: value.title,
-          onClick: that._onClick.bind(null, key),
-          key: key,
-        }, value.label);
-      }), _.identity);
-      return React.createElement('span', {className: 'yes-no-picker'}, inner);
-    }
-  });
-});
-
-/**
  * A small purpose-agnostic refresh button.
  */
 define("RefreshButton", ["react"], function(React) {
